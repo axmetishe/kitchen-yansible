@@ -1,0 +1,17 @@
+* text=auto
+
+# source code
+*.rb            text
+*.erb           text
+*.sh            text
+
+# git config
+.gitattributes  text
+.gitignore      text
+.gitconfig      text
+.editorconfig   text
+
+# Documentation
+*.md            text
+LICENSE         text
+AUTHORS         text
