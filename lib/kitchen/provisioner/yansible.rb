@@ -23,6 +23,8 @@ require 'kitchen/errors'
 require 'kitchen/provisioner/base'
 require 'kitchen-yansible/helpers/helpers'
 
+require 'open3'
+
 module Kitchen
   module Provisioner
     class Yansible < Base
@@ -33,8 +35,13 @@ module Kitchen
       DEFAULT_CONFIG = {
         remote_executor: false,
         sandboxed_executor: false,
+        playbook: 'default.yml',
         ansible_binary: 'ansible-playbook',
         ansible_version: nil,
+        ansible_config: nil,
+        ansible_extra_arguments: nil,
+        ansible_force_color: true,
+        ansible_host_key_checking: true,
       }
 
       DEFAULT_CONFIG.each do |k, v|
@@ -116,26 +123,51 @@ module Kitchen
 
       def prepare_command
         info("Prepare command.")
-
+        connection = @instance.transport.instance_variable_get(:@connection_options)
+        host = @instance.platform.os_type == 'windows' ? URI.parse(connection[:endpoint]).hostname : connection[:hostname]
+        info("host is: #{host}")
         ""
       end
 
       def install_command
         info("Install command.")
-        true_command
-        # command_path(command)
+        ""
       end
 
       def run_command
         info("Run command")
+        execute_local_command(command_env, "#{command} #{command_args.join(' ')}")
         ""
       end
 
       def command
         return @command if defined? @command
+
         @command = @config[:ansible_binary]
         debug("Ansible command: #{@command}")
         @command
+      end
+
+      def command_env
+        return @command_env if defined? @command_env
+
+        @command_env = {
+          'ANSIBLE_FORCE_COLOR' => @config[:ansible_force_color].to_s,
+          'ANSIBLE_HOST_KEY_CHECKING' => @config[:ansible_host_key_checking].to_s
+        }
+        @command_env['ANSIBLE_CONFIG'] = @config[:ansible_config] if @config[:ansible_config]
+
+        @command_env
+      end
+
+      def command_args
+        return @command_args if defined? @command_args
+
+        @command_args = []
+        @config[:ansible_extra_arguments].each { |arg| @command_args.push(arg) } if @config[:ansible_extra_arguments]
+        @command_args.push(@config[:playbook])
+
+        @command_args
       end
     end
   end

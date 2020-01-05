@@ -43,8 +43,23 @@ module Kitchen
         @local_sandbox_root
       end
 
-      def true_command
-        @instance.transport.name.downcase == 'winrm' ? '$TRUE' : 'true'
+      def execute_local_command(env, command)
+        info("env=#{env} command=#{command}")
+        _, stdout, stderr, wait_thr = Open3.popen3(env, command)
+        Thread.new do
+          stdout.each { |line| puts line }
+        end
+        exit_status = wait_thr.value
+
+        message = unindent(<<-MSG)
+
+          ===============================================================================
+           Command returned '#{exit_status}'.
+           stdout: '#{stdout.read}'
+           stderr: '#{stderr.read}'
+          ===============================================================================
+        MSG
+        raise UserError, message unless exit_status.success?
       end
     end
   end
