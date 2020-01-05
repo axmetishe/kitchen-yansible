@@ -31,8 +31,8 @@ module Kitchen
       kitchen_provisioner_api_version 2
 
       DEFAULT_CONFIG = {
-        greetings: 'Hello',
         remote_executor: false,
+        sandboxed_executor: false,
         ansible_binary: 'ansible-playbook',
         ansible_version: nil,
       }
@@ -44,17 +44,28 @@ module Kitchen
       def init_command
         info("Initializing #{name} driver")
         info("Working with '#{@instance.platform.os_type}' platform.")
-        additional_packages = []
-        if !@config[:remote_executor] or @instance.platform.os_type == 'windows'
-          info('Using local executor.')
+
+        if @config[:remote_executor]
           if @instance.platform.os_type == 'windows'
-            info('==> Windows target platform may be tested only using local Ansible installation! <==')
-            additional_packages.push('pywinrm')
+            message = unindent(<<-MSG)
+  
+              ===============================================================================
+               We can't use Windows platform with remote installation.
+               Abandon ship!
+              ===============================================================================
+            MSG
+            raise UserError, message
           end
-          if command_exists(command)
+          info('Using remote executor.')
+          # execute remote
+          # install via pip
+          #
+          ""
+        else
+          #   local executor
+          if command_exists(command) and !@config[:sandboxed_executor]
             info('Ansible is installed already - proceeding further steps.')
           else
-            info('Checking for sandboxed Ansible version')
             if RbConfig::CONFIG["host_os"] =~ /mswin|mingw/
               message = unindent(<<-MSG)
   
@@ -65,6 +76,16 @@ module Kitchen
               MSG
               raise UserError, message
             else
+              additional_packages = []
+              info('Checking for sandboxed Ansible version.')
+
+              if @instance.platform.os_type == 'windows'
+                # ok, adding pywinrm
+                info('==> Windows target platform may be tested only using local Ansible installation! <==')
+                additional_packages.push('pywinrm')
+              end
+
+              # create sandbox
               if command_exists("#{host_sandbox_root}/bin/ansible")
                 info("Ansible is installed at '#{host_sandbox_root}'.")
               else
@@ -88,22 +109,9 @@ module Kitchen
               end
             end
           end
-        else
-          info('Using remote executor.')
-          if @instance.platform.os_type == 'windows'
-            info('==> Windows target platform may be tested only using local Ansible installation! <==')
-            message = unindent(<<-MSG)
-  
-                ===============================================================================
-                 We can't use Windows platform with remote installation.
-                 Abandon ship!
-                ===============================================================================
-            MSG
-            raise UserError, message
-          end
-        end
 
-        ""
+          ""
+        end
       end
 
       def prepare_command
