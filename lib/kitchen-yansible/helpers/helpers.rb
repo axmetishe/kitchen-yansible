@@ -35,31 +35,101 @@ module Kitchen
       end
 
       def host_sandbox_root
-        if !@local_sandbox_root && !instance.nil?
-          @local_sandbox_root = File.join(
-            config[:kitchen_root], %w{.kitchen venv}
-          )
+        if !@host_sandbox_root && !instance.nil?
+          @host_sandbox_root = File.join(config[:kitchen_root], %w[ .kitchen yansible ])
         end
-        @local_sandbox_root
+        Dir.mkdir(@host_sandbox_root) unless File.exist?(@host_sandbox_root)
+        @host_sandbox_root
+      end
+
+      def instance_sandbox_root
+        if !@instance_sandbox_root && !instance.nil?
+          @instance_sandbox_root = File.join(host_sandbox_root, @instance.name)
+        end
+        Dir.mkdir(@instance_sandbox_root) unless File.exist?(@instance_sandbox_root)
+        @instance_sandbox_root
+      end
+
+      def venv_root
+        if !@venv_root && !instance.nil?
+          @venv_root = File.join(@host_sandbox_root, 'venv')
+        end
+        @venv_root
+      end
+
+      def host_inventory_file
+        File.join(instance_sandbox_root, 'inventory.yml')
       end
 
       def execute_local_command(env, command)
-        info("env=#{env} command=#{command}")
-        _, stdout, stderr, wait_thr = Open3.popen3(env, command)
-        Thread.new do
-          stdout.each { |line| puts line }
-        end
-        exit_status = wait_thr.value
-
+        env_vars = []
+        env.each { |k,v| env_vars.push("#{k}=#{v}") }
         message = unindent(<<-MSG)
 
           ===============================================================================
-           Command returned '#{exit_status}'.
-           stdout: '#{stdout.read}'
-           stderr: '#{stderr.read}'
+           Environment:
+            #{env_vars.join("\n            ")}
+           Command line:
+            #{command}
           ===============================================================================
         MSG
-        raise UserError, message unless exit_status.success?
+        debug(message)
+
+        Open3.popen3(env, command) { |stdin, stdout, stderr, thread|
+          Thread.new do
+            stdout.each { |line| puts line }
+          end
+          exit_status = thread.value
+
+          message = unindent(<<-MSG)
+
+            ===============================================================================
+             Command returned '#{exit_status}'.
+             stderr: '#{stderr.read}'
+            ===============================================================================
+          MSG
+          raise UserError, message unless exit_status.success?
+        }
+      end
+
+      def generate_inventory(inventory_file)
+        connection = @instance.transport.instance_variable_get(:@connection_options)
+        transport_conf = @instance.transport.diagnose
+
+        host_conn_vars = {}
+        host_conn_vars['ansible_connection'] = transport_conf[:name] if transport_conf[:name]
+        host_conn_vars['ansible_password'] = connection[:password] if connection[:password]
+
+        case transport_conf[:name]
+        when 'winrm'
+          host_conn_vars['ansible_host'] = URI.parse(connection[:endpoint]).hostname
+          host_conn_vars['ansible_user'] = connection[:user] if connection[:user]
+          host_conn_vars['ansible_winrm_transport'] = @config[:ansible_winrm_auth_transport] if @config[:ansible_winrm_auth_transport]
+          host_conn_vars['ansible_winrm_scheme'] = transport_conf[:winrm_transport] == :ssl ? 'https' : 'http'
+          host_conn_vars['ansible_winrm_server_cert_validation'] = @config[:ansible_winrm_cert_validation] if @config[:ansible_winrm_cert_validation]
+        when 'ssh'
+          host_conn_vars['ansible_host'] = connection[:hostname]
+          host_conn_vars['ansible_user'] = connection[:username] if connection[:username]
+          host_conn_vars['ansible_port'] = connection[:port] if connection[:port]
+          host_conn_vars['ansible_ssh_retries'] = connection[:connection_retries] if connection[:connection_retries]
+          host_conn_vars['ansible_private_key_file'] = connection[:keys].first if connection[:keys]
+          host_conn_vars['ansible_host_key_checking'] = @config[:ansible_host_key_checking] if @config[:ansible_host_key_checking]
+        else
+          message = unindent(<<-MSG)
+  
+            ===============================================================================
+             Unsupported transport - #{transport_conf[:name]}
+             SSH and WinRM transports are allowed.
+            ===============================================================================
+          MSG
+          raise UserError, message
+        end
+
+        inv = { 'all' => { 'hosts' => { @instance.name => host_conn_vars } } }
+
+        File.open(inventory_file, 'w') do |file|
+          file.write inv.to_yaml
+        end
       end
     end
   end

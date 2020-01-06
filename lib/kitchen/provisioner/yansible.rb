@@ -41,7 +41,11 @@ module Kitchen
         ansible_config: nil,
         ansible_extra_arguments: nil,
         ansible_force_color: true,
-        ansible_host_key_checking: true,
+        ansible_host_key_checking: false,
+        ansible_winrm_auth_transport: nil,
+        ansible_winrm_cert_validation: 'ignore',
+        ansible_verbose: false,
+        ansible_verbosity: 1
       }
 
       DEFAULT_CONFIG.each do |k, v|
@@ -93,13 +97,13 @@ module Kitchen
               end
 
               # create sandbox
-              if command_exists("#{host_sandbox_root}/bin/ansible")
-                info("Ansible is installed at '#{host_sandbox_root}'.")
+              if command_exists("#{venv_root}/bin/ansible")
+                info("Ansible is installed at '#{venv_root}'.")
               else
                 info("Ansible is not installed - will try to create local sandbox for execution")
                 if command_exists('virtualenv')
-                  system("virtualenv #{host_sandbox_root}")
-                  system("#{host_sandbox_root}/bin/pip install " +
+                  system("virtualenv #{venv_root}")
+                  system("#{venv_root}/bin/pip install " +
                     "ansible#{config[:ansible_version] ? "==#{config[:ansible_version]}" : ''}" +
                     " #{additional_packages.join(' ')}"
                   )
@@ -122,22 +126,31 @@ module Kitchen
       end
 
       def prepare_command
-        info("Prepare command.")
-        connection = @instance.transport.instance_variable_get(:@connection_options)
-        host = @instance.platform.os_type == 'windows' ? URI.parse(connection[:endpoint]).hostname : connection[:hostname]
-        info("host is: #{host}")
+        info("Preparing configuration for provisioner.")
+        generate_inventory(host_inventory_file)
         ""
       end
 
       def install_command
-        info("Install command.")
+        if @config[:remote_executor]
+          info("Installing provisioner software.")
+          ""
+        else
+          ""
+        end
         ""
       end
 
       def run_command
-        info("Run command")
-        execute_local_command(command_env, "#{command} #{command_args.join(' ')}")
-        ""
+        if @config[:remote_executor]
+          info("Execute Ansible remotely.")
+
+          ""
+        else
+          info("Execute Ansible locally.")
+          execute_local_command(command_env, "#{command} #{command_args.join(' ')}")
+          ""
+        end
       end
 
       def command
@@ -153,7 +166,9 @@ module Kitchen
 
         @command_env = {
           'ANSIBLE_FORCE_COLOR' => @config[:ansible_force_color].to_s,
-          'ANSIBLE_HOST_KEY_CHECKING' => @config[:ansible_host_key_checking].to_s
+          'ANSIBLE_HOST_KEY_CHECKING' => @config[:ansible_host_key_checking].to_s,
+          'ANSIBLE_INVENTORY_ENABLED' => 'yaml',
+          'ANSIBLE_RETRY_FILES_ENABLED' => false.to_s
         }
         @command_env['ANSIBLE_CONFIG'] = @config[:ansible_config] if @config[:ansible_config]
 
@@ -165,6 +180,9 @@ module Kitchen
 
         @command_args = []
         @config[:ansible_extra_arguments].each { |arg| @command_args.push(arg) } if @config[:ansible_extra_arguments]
+        @config[:ansible_verbose] ? @command_args.push('-' + 'v' * @config[:ansible_verbosity]) : ''
+        @command_args.push("--inventory=#{host_inventory_file}")
+        @command_args.push("--limit=#{@instance.name}")
         @command_args.push(@config[:playbook])
 
         @command_args
