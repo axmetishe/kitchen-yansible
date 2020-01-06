@@ -212,8 +212,9 @@ module Kitchen
                 raise UserError, message
               end
 
-              info("Resetting repository to '#{raw_ref}' reference.")
+              info("Resetting '#{dependency[:name]}' repository to '#{raw_ref}' reference.")
               repo.checkout(raw_ref, {:strategy => :force})
+              repo.close
             else
               raise UserError, "Working with '#{dependency[:repo]}' repository is not implemented yet."
             end
