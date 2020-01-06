@@ -18,6 +18,8 @@
 # specific language governing permissions and limitations
 # under the License.
 
+require 'rugged'
+
 module Kitchen
   module Yansible
     module Helpers
@@ -160,7 +162,7 @@ module Kitchen
 
       def git_clone(name, url, path)
         info("Cloning '#{name}' Git repository.")
-        execute_local_command("git clone --progress --verbose #{url} #{path}")
+        Rugged::Repository.clone_at(url, path, { :ignore_cert_errors => true })
       end
 
       def process_dependencies(dependencies)
@@ -179,39 +181,39 @@ module Kitchen
             if dependency[:repo].downcase == 'git'
               info('Processing as Git repository.')
               dependency_path = File.join(dependencies_path, dependency[:name])
-              if command_exists('git')
-                if File.exist?(dependency_path)
-                  if execute_local_command('git status .', opts: { :chdir => dependency_path })
-                    current_origin = execute_local_command('git remote get-url origin',
-                                                           opts: { :chdir => dependency_path }, return_stdout: true
-                    )
-                    if current_origin.chomp.eql?(dependency[:url])
-                      warn("Dependency downloaded already, resetting to HEAD.")
-                      execute_local_command('git clean -fdx', opts: { :chdir => dependency_path })
-                      execute_local_command('git reset --hard', opts: { :chdir => dependency_path })
-                    else
-                      warn("Removing directory #{dependency_path} due to repository origin difference.")
-                      FileUtils.remove_entry_secure(dependency_path)
-                      git_clone(dependency[:name], dependency[:url], dependency_path)
-                    end
-                  else
-                    warn("Dependency path '#{dependency_path}' is not a valid Git repository. Removing then.")
-                    FileUtils.remove_entry_secure(dependency_path)
-                    git_clone(dependency[:name], dependency[:url], dependency_path)
-                  end
+              begin
+                repo = Rugged::Repository.new(dependency_path)
+                if repo.remotes.first.url.eql?(dependency[:url])
+                  warn("Dependency cloned already.")
                 else
+                  warn("Removing directory #{dependency_path} due to repository origin difference.")
+                  FileUtils.remove_entry_secure(dependency_path)
                   git_clone(dependency[:name], dependency[:url], dependency_path)
                 end
-              else
+              rescue
+                if File.exist?(dependency_path)
+                  warn("Dependency path '#{dependency_path}' is not a valid Git repository. Removing then.")
+                  FileUtils.remove_entry_secure(dependency_path)
+                end
+                repo = git_clone(dependency[:name], dependency[:url], dependency_path)
+              end
+
+              raw_ref = dependency.key?(:ref) ? dependency[:ref] : 'master'
+              begin
+                repo.rev_parse(raw_ref)
+              rescue
                 message = unindent(<<-MSG)
-  
+
                   ===============================================================================
-                   Couldn't find git binary.
-                   Please make sure execution host has Git binaries installed.
+                   Invalid Git reference - #{raw_ref}
+                   Please check '#{dependency[:name]}' dependency configuration.
                   ===============================================================================
                 MSG
                 raise UserError, message
               end
+
+              info("Resetting repository to '#{raw_ref}' reference.")
+              repo.checkout(raw_ref, {:strategy => :force})
             else
               raise UserError, "Working with '#{dependency[:repo]}' repository is not implemented yet."
             end

@@ -36,4 +36,5 @@ Gem::Specification.new do |s|
   s.description                 = 'Yet Another Ansible Test-Kitchen Provisioner'
 
   s.add_runtime_dependency      'test-kitchen', '~> 2.0'
+  s.add_runtime_dependency      'rugged',       '~> 0.25'
 end
