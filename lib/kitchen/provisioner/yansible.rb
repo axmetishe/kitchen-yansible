@@ -156,7 +156,7 @@ module Kitchen
           ""
         else
           info("Execute Ansible locally.")
-          execute_local_command(command_env, "#{command} #{command_args.join(' ')}")
+          execute_local_command("#{command} #{command_args.join(' ')}", command_env)
 
           ""
         end
