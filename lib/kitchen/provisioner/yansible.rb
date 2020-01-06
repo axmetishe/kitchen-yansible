@@ -52,10 +52,9 @@ module Kitchen
         default_config k, v
       end
 
-      def init_command
-        info("Initializing #{name} driver")
+      def install_command
+        info("Installing provisioner software.")
         info("Working with '#{@instance.platform.os_type}' platform.")
-
         if @config[:remote_executor]
           if @instance.platform.os_type == 'windows'
             message = unindent(<<-MSG)
@@ -71,9 +70,10 @@ module Kitchen
           # execute remote
           # install via pip
           #
+
           ""
         else
-          #   local executor
+          info('Using local executor.')
           if command_exists(command) and !@config[:sandboxed_executor]
             info('Ansible is installed already - proceeding further steps.')
           else
@@ -104,8 +104,8 @@ module Kitchen
                 if command_exists('virtualenv')
                   system("virtualenv #{venv_root}")
                   system("#{venv_root}/bin/pip install " +
-                    "ansible#{config[:ansible_version] ? "==#{config[:ansible_version]}" : ''}" +
-                    " #{additional_packages.join(' ')}"
+                           "ansible#{config[:ansible_version] ? "==#{config[:ansible_version]}" : ''}" +
+                           " #{additional_packages.join(' ')}"
                   )
                 else
                   message = unindent(<<-MSG)
@@ -125,19 +125,20 @@ module Kitchen
         end
       end
 
-      def prepare_command
-        info("Preparing configuration for provisioner.")
-        generate_inventory(host_inventory_file)
-        ""
-      end
+      def init_command
+        info("Initializing provisioner software.")
 
-      def install_command
         if @config[:remote_executor]
-          info("Installing provisioner software.")
           ""
         else
           ""
         end
+      end
+
+      def prepare_command
+        info("Preparing configuration for provisioner.")
+        generate_inventory(host_inventory_file)
+
         ""
       end
 
@@ -149,6 +150,7 @@ module Kitchen
         else
           info("Execute Ansible locally.")
           execute_local_command(command_env, "#{command} #{command_args.join(' ')}")
+
           ""
         end
       end
