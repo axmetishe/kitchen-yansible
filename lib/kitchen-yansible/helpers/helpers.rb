@@ -84,39 +84,31 @@ module Kitchen
         debug(message)
       end
 
-      def print_cmd_error(stderr, exit_status)
+      def print_cmd_error(stderr, proc)
         message = unindent(<<-MSG)
 
           ===============================================================================
-           Command returned '#{exit_status}'.
+           Command returned '#{proc.exitstatus}'.
            stderr: '#{stderr.read}'
           ===============================================================================
         MSG
         debug(message)
-        raise UserError, message unless exit_status.success?
+        raise UserError, message unless proc.success?
       end
 
-      def execute_local_command(command, env = {}, opts = {})
+      def execute_local_command(command, env: {}, opts: {}, print_stdout: false, return_stdout: false)
         print_cmd_parameters(command, env)
 
         Open3.popen3(env, command, opts) { |stdin, stdout, stderr, thread|
-          Thread.new do
-            stdout.each { |line| puts line }
+          if print_stdout
+            while (line = stdout.gets)
+              puts line
+            end
           end
-          exit_status = thread.value
+          proc = thread.value
 
-          print_cmd_error(stderr, exit_status)
-          exit_status.success?
-        }
-      end
-
-      def execute_local_command_wo(command, env = {}, opts = {})
-        print_cmd_parameters(command, env)
-
-        Open3.popen3(env, command, opts) { |stdin, stdout, stderr, thread|
-          exit_status = thread.value
-          print_cmd_error(stderr, exit_status)
-          stdout.read
+          print_cmd_error(stderr, proc)
+          return_stdout ? stdout.read : proc.success?
         }
       end
 
@@ -166,6 +158,11 @@ module Kitchen
         FileUtils.copy_entry(src, dst, remove_destination=true)
       end
 
+      def git_clone(name, url, path)
+        info("Cloning '#{name}' Git repository.")
+        execute_local_command("git clone --progress --verbose #{url} #{path}")
+      end
+
       def process_dependencies(dependencies)
         dependencies_path = @config[:remote_executor] ? sandbox_path : instance_sandbox_roles
         dependencies.each do |dependency|
@@ -175,7 +172,7 @@ module Kitchen
             if File.exist?(dependency[:path])
               copy_files(dependency[:path], File.join(dependencies_path, dependency[:name]))
             else
-              error("Dependency path '#{dependency[:path]}' doesn't exists. Omitting copy operation.")
+              warn("Dependency path '#{dependency[:path]}' doesn't exists. Omitting copy operation.")
             end
           end
           if dependency.key?(:repo)
@@ -184,26 +181,26 @@ module Kitchen
               dependency_path = File.join(dependencies_path, dependency[:name])
               if command_exists('git')
                 if File.exist?(dependency_path)
-                  if execute_local_command('git status', {}, { :chdir => dependency_path })
-                    current_origin = execute_local_command_wo('git remote get-url origin',
-                                                              {}, { :chdir => dependency_path }
+                  if execute_local_command('git status .', opts: { :chdir => dependency_path })
+                    current_origin = execute_local_command('git remote get-url origin',
+                                                           opts: { :chdir => dependency_path }, return_stdout: true
                     )
                     if current_origin.chomp.eql?(dependency[:url])
                       warn("Dependency downloaded already, resetting to HEAD.")
-                      execute_local_command('git clean -fdx', {}, { :chdir => dependency_path })
-                      execute_local_command('git reset --hard', {}, { :chdir => dependency_path })
+                      execute_local_command('git clean -fdx', opts: { :chdir => dependency_path })
+                      execute_local_command('git reset --hard', opts: { :chdir => dependency_path })
                     else
                       warn("Removing directory #{dependency_path} due to repository origin difference.")
                       FileUtils.remove_entry_secure(dependency_path)
+                      git_clone(dependency[:name], dependency[:url], dependency_path)
                     end
                   else
                     warn("Dependency path '#{dependency_path}' is not a valid Git repository. Removing then.")
                     FileUtils.remove_entry_secure(dependency_path)
+                    git_clone(dependency[:name], dependency[:url], dependency_path)
                   end
                 else
-                  execute_local_command(
-                    "git clone --progress --verbose #{dependency[:url]} #{dependency_path}"
-                  )
+                  git_clone(dependency[:name], dependency[:url], dependency_path)
                 end
               end
             else
