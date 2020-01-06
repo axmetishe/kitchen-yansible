@@ -50,6 +50,14 @@ module Kitchen
         @instance_sandbox_root
       end
 
+      def instance_sandbox_roles
+        if !@instance_sandbox_roles && !instance.nil?
+          @instance_sandbox_roles = File.join(instance_sandbox_root, 'roles')
+        end
+        Dir.mkdir(@instance_sandbox_roles) unless File.exist?(@instance_sandbox_roles)
+        @instance_sandbox_roles
+      end
+
       def venv_root
         if !@venv_root && !instance.nil?
           @venv_root = File.join(@host_sandbox_root, 'venv')
@@ -129,6 +137,26 @@ module Kitchen
 
         File.open(inventory_file, 'w') do |file|
           file.write inv.to_yaml
+        end
+      end
+
+      def copy_files(src,dst)
+        info("Copy from '#{src}' to '#{dst}'")
+
+        FileUtils.copy_entry(src, dst, remove_destination=true)
+      end
+
+      def process_dependencies(dependencies)
+        dependencies.each do |dependency|
+          info("Processing '#{dependency[:name]}' dependency.")
+          if dependency.key?(:path)
+            info("Processing as path type.")
+            if File.exist?(dependency[:path])
+              copy_files(dependency[:path], File.join(instance_sandbox_roles, dependency[:name]))
+            else
+              error("Dependency path '#{dependency[:path]}' doesn't exists. Omitting copy operation.")
+            end
+          end
         end
       end
     end

@@ -45,7 +45,8 @@ module Kitchen
         ansible_winrm_auth_transport: nil,
         ansible_winrm_cert_validation: 'ignore',
         ansible_verbose: false,
-        ansible_verbosity: 1
+        ansible_verbosity: 1,
+        dependencies: [],
       }
 
       DEFAULT_CONFIG.each do |k, v|
@@ -142,6 +143,12 @@ module Kitchen
         ""
       end
 
+      def create_sandbox
+        super
+
+        process_dependencies(@config[:dependencies])
+      end
+
       def run_command
         if @config[:remote_executor]
           info("Execute Ansible remotely.")
@@ -170,7 +177,8 @@ module Kitchen
           'ANSIBLE_FORCE_COLOR' => @config[:ansible_force_color].to_s,
           'ANSIBLE_HOST_KEY_CHECKING' => @config[:ansible_host_key_checking].to_s,
           'ANSIBLE_INVENTORY_ENABLED' => 'yaml',
-          'ANSIBLE_RETRY_FILES_ENABLED' => false.to_s
+          'ANSIBLE_RETRY_FILES_ENABLED' => false.to_s,
+          'ANSIBLE_ROLES_PATH' => "#{instance_sandbox_roles}",
         }
         @command_env['ANSIBLE_CONFIG'] = @config[:ansible_config] if @config[:ansible_config]
 
