@@ -202,6 +202,15 @@ module Kitchen
                 else
                   git_clone(dependency[:name], dependency[:url], dependency_path)
                 end
+              else
+                message = unindent(<<-MSG)
+  
+                  ===============================================================================
+                   Couldn't find git binary.
+                   Please make sure execution host has Git binaries installed.
+                  ===============================================================================
+                MSG
+                raise UserError, message
               end
             else
               raise UserError, "Working with '#{dependency[:repo]}' repository is not implemented yet."
