@@ -68,50 +68,11 @@ module Kitchen
       end
 
       def host_inventory_file
-        File.join(instance_sandbox_root, 'inventory.yml')
+        File.join(@config[:remote_executor] ? sandbox_path : instance_sandbox_roles, 'inventory.yml')
       end
 
-      def print_cmd_parameters(command, env = {})
-        env_vars = []
-        env.each { |k,v| env_vars.push("#{k}=#{v}") }
-        message = unindent(<<-MSG)
-
-          ===============================================================================
-           Environment:
-            #{env_vars.join("\n            ")}
-           Command line:
-            #{command}
-          ===============================================================================
-        MSG
-        debug(message)
-      end
-
-      def print_cmd_error(stderr, proc)
-        message = unindent(<<-MSG)
-
-          ===============================================================================
-           Command returned '#{proc.exitstatus}'.
-           stderr: '#{stderr.read}'
-          ===============================================================================
-        MSG
-        debug(message)
-        raise UserError, message unless proc.success?
-      end
-
-      def execute_local_command(command, env: {}, opts: {}, print_stdout: false, return_stdout: false)
-        print_cmd_parameters(command, env)
-
-        Open3.popen3(env, command, opts) { |stdin, stdout, stderr, thread|
-          if print_stdout
-            while (line = stdout.gets)
-              puts line
-            end
-          end
-          proc = thread.value
-
-          print_cmd_error(stderr, proc)
-          return_stdout ? stdout.read : proc.success?
-        }
+      def playbook_file
+        File.join(@config[:remote_executor] ? sandbox_path : '', @config[:playbook])
       end
 
       def generate_inventory(inventory_file)
@@ -166,6 +127,7 @@ module Kitchen
       end
 
       def process_dependencies(dependencies)
+        # dependencies_path = @config[:remote_executor] ?  File.join(sandbox_path, 'roles') : instance_sandbox_roles
         dependencies_path = @config[:remote_executor] ? sandbox_path : instance_sandbox_roles
         dependencies.each do |dependency|
           info("Processing '#{dependency[:name]}' dependency.")

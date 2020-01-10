@@ -21,19 +21,26 @@
 require 'kitchen'
 require 'kitchen/errors'
 require 'kitchen/provisioner/base'
+require 'kitchen-yansible/tools/install'
 require 'kitchen-yansible/helpers/helpers'
 
-require 'open3'
-
 module Kitchen
+  class SSH
+    def upload_path(local, remote, options = {}, &progress)
+      options = { recursive: true }.merge(options)
+      upload(local, remote, options, &progress)
+    end
+  end
   module Provisioner
     class Yansible < Base
       include Kitchen::Yansible::Helpers
+      include Kitchen::Yansible::Tools
 
       kitchen_provisioner_api_version 2
 
       DEFAULT_CONFIG = {
         remote_executor: false,
+        remote_install_path: '/tmp/ansible',
         sandboxed_executor: false,
         playbook: 'default.yml',
         ansible_binary: 'ansible-playbook',
@@ -56,6 +63,7 @@ module Kitchen
       def install_command
         info("Installing provisioner software.")
         info("Working with '#{@instance.platform.os_type}' platform.")
+        debug("Driver info: '#{@instance.driver.diagnose}'.")
         if @config[:remote_executor]
           if @instance.platform.os_type == 'windows'
             message = unindent(<<-MSG)
@@ -72,7 +80,9 @@ module Kitchen
           # install via pip
           #
 
-          ""
+          """
+            #{Install.make(@config, @instance.driver.diagnose[:platform].to_s).remote_install}
+          """
         else
           info('Using local executor.')
           if command_exists(command) and !@config[:sandboxed_executor]
@@ -105,8 +115,7 @@ module Kitchen
                 if command_exists('virtualenv')
                   system("virtualenv #{venv_root}")
                   system("#{venv_root}/bin/pip install " +
-                           "ansible#{config[:ansible_version] ? "==#{config[:ansible_version]}" : ''}" +
-                           " #{additional_packages.join(' ')}"
+                           "#{Install.make(@config, @instance.driver.diagnose[:platform].to_s).pip_required_packages.join(' ')}"
                   )
                 else
                   message = unindent(<<-MSG)
@@ -122,7 +131,9 @@ module Kitchen
             end
           end
 
-          ""
+          """
+            #{Install.make(@config, @instance.driver.diagnose[:platform].to_s).local_install}
+          """
         end
       end
 
@@ -153,7 +164,12 @@ module Kitchen
         if @config[:remote_executor]
           info("Execute Ansible remotely.")
 
-          ""
+          command_env_script = []
+          command_env.each {|k,v| command_env_script.push(shell_env_var(k, v))}
+
+          """
+            #{command_env_script.join(' ')}; #{command} #{command_args.join(' ')}
+          """
         else
           info("Execute Ansible locally.")
           execute_local_command("#{command} #{command_args.join(' ')}", env: command_env, print_stdout: true)
@@ -193,7 +209,7 @@ module Kitchen
         @config[:ansible_verbose] ? @command_args.push('-' + 'v' * @config[:ansible_verbosity]) : ''
         @command_args.push("--inventory=#{host_inventory_file}")
         @command_args.push("--limit=#{@instance.name}")
-        @command_args.push(@config[:playbook])
+        @command_args.push(playbook_file)
 
         @command_args
       end
