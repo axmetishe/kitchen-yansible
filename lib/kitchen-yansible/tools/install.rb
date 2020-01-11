@@ -44,8 +44,6 @@ module Kitchen
         end
 
         def self.make(config, platform)
-          return nil if platform == ''
-
           case platform.downcase
           when /^(debian|ubuntu).*/
             return Debian.new(config, platform)

@@ -29,7 +29,7 @@ module Kitchen
         end
 
         def check_command(command, args: '')
-          "command -v #{command}" + "#{(" #{args}" if !args.empty?)}"
+          "command -v #{command}" + "#{(" #{args}" unless args.empty?)}"
         end
 
         def command_exists(command)
@@ -51,7 +51,7 @@ module Kitchen
 
             ===============================================================================
              Environment:
-              #{env_vars.join("\n            ")}
+              #{env_vars.join("\n              ")}
              Command line:
               #{command}
             ===============================================================================
@@ -74,6 +74,7 @@ module Kitchen
         def execute_local_command(command, env: {}, opts: {}, print_stdout: false, return_stdout: false)
           print_cmd_parameters(command, env)
 
+          # noinspection RubyUnusedLocalVariable
           Open3.popen3(env, command, opts) { |stdin, stdout, stderr, thread|
             if print_stdout
               while (line = stdout.gets)
