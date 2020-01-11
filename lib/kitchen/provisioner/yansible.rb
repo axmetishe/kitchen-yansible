@@ -27,12 +27,6 @@ require 'kitchen-yansible/tools/exec'
 require 'kitchen-yansible/tools/dependencies'
 
 module Kitchen
-  class SSH
-    def upload_path(local, remote, options = {}, &progress)
-      options = { recursive: true }.merge(options)
-      upload(local, remote, options, &progress)
-    end
-  end
   module Provisioner
     class Yansible < Base
       include Kitchen::Yansible::Tools
@@ -57,17 +51,11 @@ module Kitchen
         ansible_winrm_cert_validation: 'ignore',
         ansible_verbose: false,
         ansible_verbosity: 1,
+        ansible_roles_path: 'roles',
         dependencies: [],
       }
 
-      DEFAULT_CONFIG.each do |k, v|
-        default_config k, v
-      end
-
-      def initialize(config)
-        super(config)
-        @config = config
-      end
+      DEFAULT_CONFIG.each { |k, v| default_config k, v }
 
       def install_command
         info("Installing provisioner software.")
@@ -85,9 +73,6 @@ module Kitchen
             raise UserError, message
           end
           info('Using remote executor.')
-          # execute remote
-          # install via pip
-          #
 
           """
             #{Install.make(@config, @instance.driver.diagnose[:platform].to_s).remote_install}
@@ -148,17 +133,14 @@ module Kitchen
 
       def init_command
         info("Initializing provisioner software.")
-
-        if @config[:remote_executor]
-          ""
-        else
-          ""
-        end
+        "mkdir #{@instance.platform.os_type == 'windows' ? '-Force' : '-p'} #{config[:root_path]}"
       end
 
       def prepare_command
         info("Preparing configuration for provisioner.")
-        generate_inventory(host_inventory_file)
+        unless @config[:remote_executor]
+          generate_inventory(inventory_file)
+        end
 
         ""
       end
@@ -166,7 +148,17 @@ module Kitchen
       def create_sandbox
         super
 
-        process_dependencies(@config[:dependencies])
+        prepare_dependencies(@config[:dependencies])
+        generate_inventory(inventory_file, remote: true)
+
+        info("Copy dependencies to sandbox")
+        copy_dirs_to_sandbox(dependencies_tmp_dir, dst: 'roles')
+        info("Copy roles to sandbox")
+        copy_dirs_to_sandbox('roles')
+        info("Prepare playbook")
+        prepare_playbook_file
+        info("Prepare inventory file")
+        prepare_inventory_file
       end
 
       def run_command
@@ -198,12 +190,13 @@ module Kitchen
       def command_env
         return @command_env if defined? @command_env
 
+        # noinspection RubyStringKeysInHashInspection
         @command_env = {
           'ANSIBLE_FORCE_COLOR' => @config[:ansible_force_color].to_s,
           'ANSIBLE_HOST_KEY_CHECKING' => @config[:ansible_host_key_checking].to_s,
           'ANSIBLE_INVENTORY_ENABLED' => 'yaml',
           'ANSIBLE_RETRY_FILES_ENABLED' => false.to_s,
-          'ANSIBLE_ROLES_PATH' => "#{instance_sandbox_roles}",
+          'ANSIBLE_ROLES_PATH' => remote_file_path('roles', fallback: generate_sandbox_path('roles')),
         }
         @command_env['ANSIBLE_CONFIG'] = @config[:ansible_config] if @config[:ansible_config]
 
@@ -216,9 +209,9 @@ module Kitchen
         @command_args = []
         @config[:ansible_extra_arguments].each { |arg| @command_args.push(arg) } if @config[:ansible_extra_arguments]
         @config[:ansible_verbose] ? @command_args.push('-' + 'v' * @config[:ansible_verbosity]) : ''
-        @command_args.push("--inventory=#{host_inventory_file}")
+        @command_args.push("--inventory=#{remote_file_path(ANSIBLE_INVENTORY, fallback: inventory_file)}")
         @command_args.push("--limit=#{@instance.name}")
-        @command_args.push(playbook_file)
+        @command_args.push(remote_file_path(@config[:playbook]))
 
         @command_args
       end
