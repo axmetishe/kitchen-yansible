@@ -22,7 +22,9 @@ require 'kitchen'
 require 'kitchen/errors'
 require 'kitchen/provisioner/base'
 require 'kitchen-yansible/tools/install'
-require 'kitchen-yansible/helpers/helpers'
+require 'kitchen-yansible/tools/files'
+require 'kitchen-yansible/tools/exec'
+require 'kitchen-yansible/tools/dependencies'
 
 module Kitchen
   class SSH
@@ -33,8 +35,10 @@ module Kitchen
   end
   module Provisioner
     class Yansible < Base
-      include Kitchen::Yansible::Helpers
       include Kitchen::Yansible::Tools
+      include Kitchen::Yansible::Tools::Exec
+      include Kitchen::Yansible::Tools::Files
+      include Kitchen::Yansible::Tools::Dependencies
 
       kitchen_provisioner_api_version 2
 
@@ -58,6 +62,11 @@ module Kitchen
 
       DEFAULT_CONFIG.each do |k, v|
         default_config k, v
+      end
+
+      def initialize(config)
+        super(config)
+        @config = config
       end
 
       def install_command

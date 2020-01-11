@@ -84,7 +84,7 @@ module Kitchen
                 searchAlternatives 'virtualenv'
                 #{command_exists('virtualenv')} || {
                   echo 'Attempt to guess Virtualenv package.'
-                  venvPackage=python$(python -c 'import sys; print(\"\".join(map(str, sys.version_info[:#{PYTHON_VERSION_SIZE}])))')-virtualenv
+                  venvPackage=python$(python -c 'import sys; print(\"\".join(map(str, sys.version_info[:#{python_version_size}])))')-virtualenv
                   #{install_package} ${venvPackage}||#{install_package} python-virtualenv
                   #{install_package} virtualenv
 

@@ -47,11 +47,11 @@ module Kitchen
           return nil if platform == ''
 
           case platform.downcase
-          when 'debian', 'ubuntu'
+          when /^(debian|ubuntu).*/
             return Debian.new(config, platform)
-          when 'redhat', 'centos', /^oracle.*/
+          when /^(redhat|centos|oracle).*/
             return RHEL.new(config, platform)
-          when 'fedora'
+          when /^fedora.*/
             return Fedora.new(config, platform)
           when /^amazon.*/
             return Amazon.new(config, platform)
@@ -65,7 +65,7 @@ module Kitchen
           #   return Openbsd.new(platform, config)
           # when 'freebsd'
           #   return Freebsd.new(platform, config)
-          when 'windows'
+          when /^windows.*/
             return Windows.new(config, platform)
           else
             raise UserError "Unsupported platform - '#{platform.to_s}'!"

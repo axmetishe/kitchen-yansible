@@ -18,12 +18,14 @@
 # specific language governing permissions and limitations
 # under the License.
 
+require 'open3'
+
 module Kitchen
   module Yansible
     module Tools
       module Exec
-        def initialize(config)
-          @config = config
+        def unindent(s)
+          s.gsub(/^#{s.scan(/^[ \t]+(?=\S)/).min}/, '')
         end
 
         def check_command(command, args: '')
@@ -47,12 +49,12 @@ module Kitchen
           env.each { |k,v| env_vars.push("#{k}=#{v}") }
           message = unindent(<<-MSG)
 
-          ===============================================================================
-           Environment:
-            #{env_vars.join("\n            ")}
-           Command line:
-            #{command}
-          ===============================================================================
+            ===============================================================================
+             Environment:
+              #{env_vars.join("\n            ")}
+             Command line:
+              #{command}
+            ===============================================================================
           MSG
           debug(message)
         end
@@ -60,10 +62,10 @@ module Kitchen
         def print_cmd_error(stderr, proc)
           message = unindent(<<-MSG)
 
-          ===============================================================================
-           Command returned '#{proc.exitstatus}'.
-           stderr: '#{stderr.read}'
-          ===============================================================================
+            ===============================================================================
+             Command returned '#{proc.exitstatus}'.
+             stderr: '#{stderr.read}'
+            ===============================================================================
           MSG
           debug(message)
           raise UserError, message unless proc.success?
