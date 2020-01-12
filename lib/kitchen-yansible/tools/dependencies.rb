@@ -82,7 +82,7 @@ module Kitchen
                 raise UserError, "Working with '#{dependency[:repo]}' repository is not implemented yet."
               end
             end
-          end
+          end unless dependencies.nil?
         end
       end
     end
