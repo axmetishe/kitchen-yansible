@@ -55,6 +55,7 @@ module Kitchen
         dependencies: [],
       }
 
+      # noinspection RubyYardParamTypeMatch
       DEFAULT_CONFIG.each { |k, v| default_config k, v }
 
       def install_command
@@ -148,13 +149,29 @@ module Kitchen
       def create_sandbox
         super
 
+        directories = %w[
+          roles
+          host_vars
+          group_vars
+          module_utils
+          library
+          callback_plugins
+          connection_plugins
+          filter_plugins
+          lookup_plugins
+        ]
+
         prepare_dependencies(@config[:dependencies])
         generate_inventory(inventory_file, remote: true)
 
         info("Copy dependencies to sandbox")
         copy_dirs_to_sandbox(dependencies_tmp_dir, dst: 'roles')
-        info("Copy roles to sandbox")
-        copy_dirs_to_sandbox('roles')
+        directories.each do |directory|
+          if File.directory?(directory)
+            info("Copy #{directory} to sandbox")
+            copy_dirs_to_sandbox(directory)
+          end
+        end
         info("Prepare playbook")
         prepare_playbook_file
         info("Prepare inventory file")

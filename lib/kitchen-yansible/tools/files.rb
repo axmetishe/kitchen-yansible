@@ -145,11 +145,15 @@ module Kitchen
 
         def copy_dirs(src, dst, reject: '.git')
           expand_path=File.expand_path(src)
-          debug("Copy '#{src}' to '#{dst}'.")
-          debug("'#{src}' expanded to '#{expand_path}'")
-          Dir.glob("#{expand_path}/**/{*,.*}").reject{|f| f[reject]}.each do |file|
-            target = dst + file.sub(expand_path, '')
-            File.file?(file) ? FileUtils.copy(file, target) : FileUtils.mkdir(target) unless File.exist?(target)
+          if File.exist?(expand_path)
+            debug("Copy '#{src}' to '#{dst}'.")
+            debug("'#{src}' expanded to '#{expand_path}'")
+            Dir.glob("#{expand_path}/**/{*,.*}").reject{|f| f[reject]}.each do |file|
+              target = dst + file.sub(expand_path, '')
+              File.file?(file) ? FileUtils.copy(file, target) : FileUtils.mkdir_p(target) unless File.exist?(target)
+            end
+          else
+            debug("Path '#{src}' doesn't exists. Omitting copy operation.")
           end
         end
 
