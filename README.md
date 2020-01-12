@@ -30,9 +30,203 @@ have no ability to pin to specific system and, in general, why you even would to
 
 ## About
 This provider has two major features - local and remote execution using single provisioner.
-Why is that mean? - Well, Ansible was created as master-less configuration management tool for simple management from
-any place without dedicated master, so the provisioner for Ansible must have the same behaviour obviously.
-Despite the fact I'm not an Ansible fan I like when tool is used at purpose -you wouldn't want to use a microscope to
-hammer a nail=) 
 
-To be continued...
+Why is that matter? - Well, Ansible was created as masterless/agentless configuration management tool for simple
+management from any place without dedicated master, so the provisioner for Ansible must have the same behaviour obviously.
+Despite the fact I'm not an Ansible fan I like when tool is used at purpose - you wouldn't want to use a microscope to
+hammer a nail=)
+
+On the other hand Ansible modules would not work without Python installed(agentless - heh=) on instance under test
+which are force us to manage Python installation for containerized instances and in case we need to install Python,
+why we can't install Ansible as well?
+Or maybe you just don't want to install some Python dependencies locally required for Ansible?
+That is why remote installation is also takes a place.
+
+## How to install
+`gem build kitchen-yansible.gemspec && gem install kitchen-yansible-0.0.1.gem` as for now.
+
+TDB
+
+## How to use
+You need to install the gem and define the provisioner in general. 
+```yaml
+provisioner:
+  name: yansible
+```
+
+### Default configuration
+The simple configuration above will initialize provisioner with default options like:
+- Local Ansible execution, e.g. "push" mode.
+- In case Ansible is not installed locally we will try to use Python Virtualenv binary in order to install latest
+Ansible into instance sandbox directory. 
+- When we will be able to use Ansible we will run it against 'default.yml' playbook at the kitchen root diretory
+
+### Provisioner options
+```yaml
+provisioner:
+  name: yansible
+  ansible_version: 2.7.12                 # Defines the version of Ansible to install into sandbox or on the instance under test
+  sandboxed_executor: true                # Forces sandbox creation on the host for "push" mode even Ansible is installed locally
+  remote_executor: true                   # Switch executor to remote installation on instance under test - except for Windows platform
+  ansible_verbose: true                   # Enable Ansible verbose - '-v'
+  ansible_verbosity: 4                    # Ansible verbosity level - '-vvvv'
+  dependencies:                           # Dependencies management
+    - name: 'jdk'                         # Path dependency - will be copied into sandbox recursively, excluding '.git/' directory
+      path: '../jdk/roles/jdk'            # Relative or absolute path to the role root directory
+    - name: 'mysql'                       # Git dependency - will be cloned using shallow clone to specified git ref 
+      repo: 'git'                         # Only Git VCS supported at the moment
+      url: 'https://github.com/geerlingguy/ansible-role-mysql.git'
+      ref: '1.6.0'                        # Valid git ref, e.g. branch, tag, or even commit hash
+  ansible_binary: 'ansible-playbook'      # Allow to change main executable binary
+  ansible_config: nil                     # Copy to sandbox and enable Ansible config usage
+  ansible_roles_path: 'roles'             # Override default roles directory  
+  ansible_extra_arguments:                # Extra arguments to pass to Ansible command as-is
+    - '-e "version=1.23.45 other_variable=foo"'
+  ansible_force_color: true               # Force colorized stdout
+  ansible_host_key_checking: false        # Disable/Enable host key checking
+  ansible_winrm_auth_transport: nil       # Auth transport for WinRM - 'Basic' if not defined
+  ansible_winrm_cert_validation: 'ignore' # Ignore WinRM connection certificate issues - 'ignore', 'validate' 
+```
+
+### Complex example
+```yaml
+driver:
+  name: docker
+
+provisioner:
+  name: yansible
+  ansible_verbose: true
+  dependencies:
+    - name: 'jdk'
+      path: '../jdk/roles/jdk'
+    - name: 'mysql'
+      repo: 'git'
+      url: 'https://github.com/geerlingguy/ansible-role-mysql.git'
+      ref: '1eee6e262bff56094398cbb285b44634b9763349'
+  ansible_extra_arguments:
+    - '-e "version=1.23.45 other_variable=foo"'
+
+platforms:
+  # Vagrant driver
+  - name: ubuntu-vagrant
+    driver:
+      name: vagrant
+      provider: libvirt
+      box: generic/ubuntu1804
+
+  # Make sure that Windows box template forward WinRM ports, winrm transport and user credentials are correct
+  - name: windows
+    transport:
+      name: winrm
+      username: 'user'
+      password: 'user'
+      winrm_transport: :ssl
+    driver:
+      name: vagrant
+      provider: libvirt
+      box: local/windows
+      vagrantfile_erb: 'Vagrant-template'
+    driver_config:
+      communicator: winrm
+    provisioner:
+      remote_executor: false
+
+  # Docker driver
+  - name: centos-6
+    driver_config:
+      image: centos:6
+  - name: centos-7
+    driver_config:
+      image: centos:7
+      provision_command:
+        - yum install -y unzip tar
+  - name: centos-8
+    driver_config:
+      image: centos:8
+  - name: oraclelinux-6
+    driver_config:
+      image: oraclelinux:6
+  - name: oraclelinux-7
+    driver_config:
+      image: oraclelinux:7
+  - name: oraclelinux-8
+    driver_config:
+      image: oraclelinux:8
+  - name: fedora-26
+    driver_config:
+      image: fedora:26
+  - name: fedora-27
+    driver_config:
+      image: fedora:27
+  - name: fedora-28
+    driver_config:
+      image: fedora:28
+  - name: fedora-29
+    driver_config:
+      image: fedora:29
+  - name: fedora-30
+    driver_config:
+      image: fedora:30
+  - name: fedora-31
+    driver_config:
+      image: fedora:31
+  - name: amazonlinux-1
+    driver_config:
+      image: amazonlinux:1
+  - name: amazonlinux-2
+    driver_config:
+      image: amazonlinux:2
+  - name: debian-7
+    driver_config:
+      image: local/debian:7
+  - name: debian-8
+    driver_config:
+      image: debian:8
+  - name: debian-9
+    driver_config:
+      image: debian:9
+  - name: debian-10
+    driver_config:
+      image: debian:10
+  - name: ubuntu-14.04
+    driver_config:
+      image: ubuntu:14.04
+  - name: ubuntu-16.04
+    driver_config:
+      image: ubuntu:16.04
+  - name: ubuntu-18.04
+    driver_config:
+      image: ubuntu:18.04
+  - name: ubuntu-19.04
+    driver_config:
+      image: ubuntu:19.04
+  - name: ubuntu-19.10
+    driver_config:
+      image: ubuntu:19.10
+
+  # Docker driver, systemd init system
+  - name: centos-8-systemd
+    driver:
+      volume: /sys/fs/cgroup:/sys/fs/cgroup:ro
+      cap_add:
+        - SYS_ADMIN
+    driver_config:
+      image: local/centos8-systemd:1.0
+      run_command: /sbin/init
+  - name: amazonlinux-2-systemd
+    driver:
+      volume: /sys/fs/cgroup:/sys/fs/cgroup:ro
+      cap_add:
+        - SYS_ADMIN
+    driver_config:
+      image: local/amazonlinux2-systemd:1.0
+      run_command: /usr/sbin/init
+  - name: ubuntu-18.04-systemd
+    driver:
+      volume: /sys/fs/cgroup:/sys/fs/cgroup:ro
+      cap_add:
+        - SYS_ADMIN
+    driver_config:
+      image: local/ubuntu18.04-systemd:1.0
+      run_command: /lib/systemd/systemd
+```
