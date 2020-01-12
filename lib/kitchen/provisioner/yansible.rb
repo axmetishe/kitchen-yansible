@@ -62,8 +62,11 @@ module Kitchen
         info("Installing provisioner software.")
         info("Working with '#{@instance.platform.os_type}' platform.")
         debug("Driver info: '#{@instance.driver.diagnose}'.")
+        debug("Platform info: '#{@instance.platform.diagnose}'.")
+        instance_platform = detect_platform
+
         if @config[:remote_executor]
-          if @instance.platform.os_type == 'windows'
+          if windows_os?
             message = unindent(<<-MSG)
   
               ===============================================================================
@@ -76,7 +79,7 @@ module Kitchen
           info('Using remote executor.')
 
           """
-            #{Install.make(@config, @instance.driver.diagnose[:platform].to_s).remote_install}
+            #{Install.make(@config, instance_platform).remote_install}
           """
         else
           info('Using local executor.')
@@ -96,7 +99,7 @@ module Kitchen
               additional_packages = []
               info('Checking for sandboxed Ansible version.')
 
-              if @instance.platform.os_type == 'windows'
+              if windows_os?
                 # ok, adding pywinrm
                 info('==> Windows target platform may be tested only using local Ansible installation! <==')
                 additional_packages.push('pywinrm')
@@ -110,7 +113,7 @@ module Kitchen
                 if command_exists('virtualenv')
                   system("virtualenv #{venv_root}")
                   system("#{venv_root}/bin/pip install " +
-                           "#{Install.make(@config, @instance.driver.diagnose[:platform].to_s).pip_required_packages.join(' ')}"
+                           "#{Install.make(@config, instance_platform).pip_required_packages.join(' ')}"
                   )
                 else
                   message = unindent(<<-MSG)
@@ -127,14 +130,14 @@ module Kitchen
           end
 
           """
-            #{Install.make(@config, @instance.driver.diagnose[:platform].to_s).local_install}
+            #{Install.make(@config, instance_platform).local_install}
           """
         end
       end
 
       def init_command
         info("Initializing provisioner software.")
-        "mkdir #{@instance.platform.os_type == 'windows' ? '-Force' : '-p'} #{config[:root_path]}"
+        "mkdir #{windows_os? ? '-Force' : '-p'} #{config[:root_path]}"
       end
 
       def prepare_command
