@@ -7,7 +7,7 @@ For a long time I used to work with SaltStack with integration testing for at le
 a great experience, special thanks to eco-system created by SaltStack team and [Daniel Wallace](https://github.com/gtmanfred)
 for his 'salt-solo' provisioner especially.
 
-Now I'm working with Ansible and just want to maintain the same development comfort as with SaltStack. 
+Now I'm working with Ansible and just want to maintain the same development comfort as with SaltStack.
 
 As was mentioned before this plugin was inspired by three other provisioners with different configuration behaviour and
 even another configuration management tool provisioner:
@@ -48,7 +48,7 @@ That is why remote installation is also takes a place.
 TDB
 
 ## How to use
-You need to install the gem and define the provisioner in general. 
+You need to install the gem and define the provisioner in general.
 ```yaml
 provisioner:
   name: yansible
@@ -58,34 +58,68 @@ provisioner:
 The simple configuration above will initialize provisioner with default options like:
 - Local Ansible execution, e.g. "push" mode.
 - In case Ansible is not installed locally we will try to use Python Virtualenv binary in order to install latest
-Ansible into instance sandbox directory. 
+Ansible into instance sandbox directory.
 - When we will be able to use Ansible we will run it against 'default.yml' playbook at the kitchen root diretory
 
 ### Provisioner options
 ```yaml
 provisioner:
   name: yansible
-  ansible_version: 2.7.12                 # Defines the version of Ansible to install into sandbox or on the instance under test
-  sandboxed_executor: true                # Forces sandbox creation on the host for "push" mode even Ansible is installed locally
-  remote_executor: true                   # Switch executor to remote installation on instance under test - except for Windows platform
-  ansible_verbose: true                   # Enable Ansible verbose - '-v'
-  ansible_verbosity: 4                    # Ansible verbosity level - '-vvvv'
-  dependencies:                           # Dependencies management
-    - name: 'jdk'                         # Path dependency - will be copied into sandbox recursively, excluding '.git/' directory
-      path: '../jdk/roles/jdk'            # Relative or absolute path to the role root directory
-    - name: 'mysql'                       # Git dependency - will be cloned using shallow clone to specified git ref 
-      repo: 'git'                         # Only Git VCS supported at the moment
+
+  # Defines the version of Ansible to install into sandbox or on the instance under test
+  ansible_version: 2.7.12
+
+  # Forces sandbox creation on the host for "push" mode even Ansible is installed locally
+  sandboxed_executor: true
+
+  # Switch executor to remote installation on instance under test - except for Windows platform
+  remote_executor: true
+
+  # Enable Ansible verbose output - '-v'
+  ansible_verbose: true
+
+  # Ansible verbosity level - '-vvvv'
+  ansible_verbosity: 4
+
+  # Dependencies management
+  dependencies:
+    # Path dependency - will be copied into sandbox recursively, excluding '.git/' directory
+    - name: 'jdk'
+      # Relative or absolute path to the role root directory
+      path: '../jdk/roles/jdk'
+
+    # Git dependency - will be cloned using shallow clone to specified git ref
+    - name: 'mysql'
+      # Only Git VCS supported at the moment
+      repo: 'git'
       url: 'https://github.com/geerlingguy/ansible-role-mysql.git'
-      ref: '1.6.0'                        # Valid git ref, e.g. branch, tag, or even commit hash
-  ansible_binary: 'ansible-playbook'      # Allow to change main executable binary
-  ansible_config: nil                     # Copy to sandbox and enable Ansible config usage
-  ansible_roles_path: 'roles'             # Override default roles directory  
-  ansible_extra_arguments:                # Extra arguments to pass to Ansible command as-is
+      # Valid git ref, e.g. branch, tag, or even commit hash
+      ref: '1.6.0'
+
+  # Allow to change main executable binary
+  ansible_binary: 'ansible-playbook'
+
+  # Copy to sandbox and enable Ansible config usage
+  ansible_config: nil
+
+  # Override default roles directory
+  ansible_roles_path: 'roles'
+
+  # Extra arguments to pass to Ansible command as-is
+  ansible_extra_arguments:
     - '-e "version=1.23.45 other_variable=foo"'
-  ansible_force_color: true               # Force colorized stdout
-  ansible_host_key_checking: false        # Disable/Enable host key checking
-  ansible_winrm_auth_transport: nil       # Auth transport for WinRM - 'Basic' if not defined
-  ansible_winrm_cert_validation: 'ignore' # Ignore WinRM connection certificate issues - 'ignore', 'validate' 
+
+  # Force colorized stdout
+  ansible_force_color: true
+
+  # Disable/Enable host key check
+  ansible_host_key_checking: false
+
+  # Auth transport for WinRM - 'Basic' if not defined
+  ansible_winrm_auth_transport: nil
+
+  # Ignore WinRM connection certificate issues - 'ignore', 'validate'
+  ansible_winrm_cert_validation: 'ignore'
 ```
 
 ### Complex example
@@ -114,7 +148,8 @@ platforms:
       provider: libvirt
       box: generic/ubuntu1804
 
-  # Make sure that Windows box template forward WinRM ports, winrm transport and user credentials are correct
+  # Make sure that Windows box template forward WinRM ports, winrm transport and
+  # user credentials are correct
   - name: windows
     transport:
       name: winrm
