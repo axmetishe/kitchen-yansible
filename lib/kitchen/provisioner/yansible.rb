@@ -175,6 +175,8 @@ module Kitchen
             copy_dirs_to_sandbox(directory)
           end
         end
+        info("Prepare config")
+        prepare_ansible_config
         info("Prepare playbook")
         prepare_playbook_file
         info("Prepare inventory file")

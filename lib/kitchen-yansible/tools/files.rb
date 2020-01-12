@@ -36,6 +36,12 @@ module Kitchen
           end
         end
 
+        def prepare_ansible_config
+          if @config[:ansible_config]
+            copy_files(@config[:ansible_config], File.join(sandbox_path, @config[:ansible_config]))
+          end
+        end
+
         def prepare_playbook_file
           if @config[:remote_executor]
             copy_files(@config[:playbook], File.join(sandbox_path, @config[:playbook]))
