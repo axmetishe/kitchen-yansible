@@ -44,14 +44,15 @@ module Kitchen
         end
 
         def self.make(config, platform)
+
           case platform.downcase
-          when /^(debian|ubuntu).*/
+          when /.*(debian|ubuntu).*/
             return Debian.new(config, platform)
-          when /^(redhat|centos|oracle).*/
+          when /.*(redhat|centos|oracle).*/
             return RHEL.new(config, platform)
-          when /^fedora.*/
+          when /.*fedora.*/
             return Fedora.new(config, platform)
-          when /^amazon.*/
+          when /.*amazon.*/
             return Amazon.new(config, platform)
           # when 'suse', 'opensuse', 'sles'
           #   return Suse.new(platform, config)
@@ -63,10 +64,10 @@ module Kitchen
           #   return Openbsd.new(platform, config)
           # when 'freebsd'
           #   return Freebsd.new(platform, config)
-          when /^windows.*/
+          when /.*windows.*/
             return Windows.new(config, platform)
           else
-            raise UserError "Unsupported platform - '#{platform.to_s}'!"
+            raise "Unsupported platform - '#{platform.to_s}'!"
           end
         end
 

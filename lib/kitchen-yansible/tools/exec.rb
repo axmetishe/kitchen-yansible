@@ -100,6 +100,11 @@ module Kitchen
         def sudo(script)
           "sudo -E #{script}"
         end
+
+        def detect_platform
+          @instance.driver.diagnose[:name] == 'docker' ?
+            @instance.driver.diagnose[:platform].to_s : @instance.platform.name.to_s
+        end
       end
     end
   end

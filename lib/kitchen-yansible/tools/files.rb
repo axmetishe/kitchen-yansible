@@ -80,7 +80,7 @@ module Kitchen
 
         def venv_root
           if !@venv_root && !instance.nil?
-            @venv_root = File.join(@host_sandbox_root, 'venv')
+            @venv_root = File.join(instance_tmp_dir, 'venv')
           end
           @venv_root
         end
@@ -150,7 +150,11 @@ module Kitchen
             debug("'#{src}' expanded to '#{expand_path}'")
             Dir.glob("#{expand_path}/**/{*,.*}").reject{|f| f[reject]}.each do |file|
               target = dst + file.sub(expand_path, '')
-              File.file?(file) ? FileUtils.copy(file, target) : FileUtils.mkdir_p(target) unless File.exist?(target)
+              if File.file?(file)
+                FileUtils.copy_entry(file, target, remove_destination: true)
+              else
+                FileUtils.mkdir_p(target) unless File.exist?(target)
+              end
             end
           else
             debug("Path '#{src}' doesn't exists. Omitting copy operation.")
