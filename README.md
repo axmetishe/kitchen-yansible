@@ -265,3 +265,14 @@ platforms:
       image: local/ubuntu18.04-systemd:1.0
       run_command: /lib/systemd/systemd
 ```
+
+## TODO
+
+- Tests execution
+- Dependencies mgmt - librarian-ansible
+- Remote installation via pkgmgr
+- Platforms:
+-- Darwin
+-- Alpine
+-- Suse
+-- *BSD
