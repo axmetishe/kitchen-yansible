@@ -63,6 +63,14 @@ module Kitchen
                     grep 'ANSIBLE_PYTHON_INTERPRETER' /etc/profile.d/ansible.sh &> /dev/null || {
                       #{sudo('echo')} \"export ANSIBLE_PYTHON_INTERPRETER=/usr/local/bin/python\"| #{sudo('tee')} -a /etc/profile.d/ansible.sh
                     }
+                    grep XDG_DATA_DIRS /etc/sudoers.d/ansible &> /dev/null || {
+                      #{sudo('echo')} 'Defaults    env_keep += \"XDG_DATA_DIRS PKG_CONFIG_PATH ANSIBLE_PYTHON_INTERPRETER\"' | #{sudo('tee')} -a /etc/sudoers.d/ansible
+                    }
+                    grep /opt/rh/python27 /etc/sudoers.d/ansible &> /dev/null || {
+                      #{sudo('echo')} 'Defaults    secure_path = /opt/rh/python27/root/usr/bin:/sbin:/bin:/usr/sbin:/usr/bin' | #{sudo('tee')} -a /etc/sudoers.d/ansible
+                    }
+                    test -L /usr/lib64/libpython2.7.so.1.0 || #{sudo('ln')} -sf /opt/rh/python27/root/usr/lib64/libpython2.7.so.1.0 /usr/lib64/libpython2.7.so.1.0
+                    test -L /usr/lib64/libpython2.7.so || #{sudo('ln')} -sf /usr/lib64/libpython2.7.so.1.0 /usr/lib64/libpython2.7.so
                   } || {
                     echo \"Unsupported RHEL family distribution - ${RHEL_DISTR}\"
                   }
