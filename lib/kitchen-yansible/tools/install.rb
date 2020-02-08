@@ -77,11 +77,13 @@ module Kitchen
             #{search_alternatives}
             #{install_python}
             #{install_virtualenv}
+            #{install_ruby}
             #{install_ansible_pip('/tmp/ansible')}
 
             preInstall
             installPython
             installVirtualenv
+            installRuby
             #{command_exists('ansible')} && {
               ansible --version|head -n1|grep -i 'ansible #{ansible_version}' &>/dev/null || installAnsiblePip
             } || installAnsiblePip
@@ -93,9 +95,11 @@ module Kitchen
             #{preinstall_command}
             #{search_alternatives}
             #{install_python}
+            #{install_ruby}
 
             preInstall
             installPython
+            installRuby
           """
         end
 
