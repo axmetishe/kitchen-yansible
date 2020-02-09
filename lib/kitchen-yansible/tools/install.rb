@@ -186,7 +186,7 @@ module Kitchen
                 test -n \"${alternateCmd}\" && {
                   echo \"Attempt to install '${alternateCmd}' as an alternative.\"
                   #{command_exists("${alternateCmd}")} && {
-                    #{alternatives_command} --install #{BINARY_INSTALL_PREFIX}/${binaryCmd} ${binaryCmd} $(#{check_command("${alternateCmd}")}) 100
+                    #{alternatives_command} --install #{BINARY_DEFAULT_PREFIX}/${binaryCmd} ${binaryCmd} $(#{check_command("${alternateCmd}")}) 100
                     #{alternatives_command} --set ${binaryCmd} $(#{check_command("${alternateCmd}")})
                   }
                 }

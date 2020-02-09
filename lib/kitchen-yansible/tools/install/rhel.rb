@@ -25,6 +25,8 @@ module Kitchen
         class RHEL < Install
           def preinstall_command
             """
+              #{update_path}
+
               installPackage () {
                 package=$1
                 #{package_manager} -q info ${package} 2>/dev/null|grep installed &>/dev/null || #{install_package} ${package}
@@ -67,6 +69,10 @@ module Kitchen
                 #{sudo('grep')} 'ANSIBLE_PYTHON_INTERPRETER' /etc/profile.d/ansible.sh &> /dev/null || {
                   #{sudo('echo')} \"export ANSIBLE_PYTHON_INTERPRETER=/usr/local/bin/python\"| #{sudo('tee')} -a /etc/profile.d/ansible.sh
                 }
+                #{sudo('grep')} XDG_DATA_DIRS /etc/sudoers.d/ansible &> /dev/null || {
+                  #{sudo('echo')} 'Defaults    env_keep += \"XDG_DATA_DIRS PKG_CONFIG_PATH ANSIBLE_PYTHON_INTERPRETER\"' | #{sudo('tee')} -a /etc/sudoers.d/ansible
+                }
+
                 test -L /usr/lib64/libpython2.7.so.1.0 || {
                   #{sudo('ln')} -sf /opt/rh/python27/root/usr/lib64/libpython2.7.so.1.0 \\
                     /usr/lib64/libpython2.7.so.1.0
@@ -76,15 +82,6 @@ module Kitchen
                 }
 
                 enableSCLPackage 'python27'
-              }
-
-              updatePath () {
-                #{sudo('grep')} secure_path /etc/sudoers.d/ansible &> /dev/null || {
-                  #{sudo('echo')} 'Defaults    secure_path = /usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin' | #{sudo('tee')} -a /etc/sudoers.d/ansible
-                }
-                #{sudo('grep')} XDG_DATA_DIRS /etc/sudoers.d/ansible &> /dev/null || {
-                  #{sudo('echo')} 'Defaults    env_keep += \"XDG_DATA_DIRS PKG_CONFIG_PATH ANSIBLE_PYTHON_INTERPRETER\"' | #{sudo('tee')} -a /etc/sudoers.d/ansible
-                }
               }
 
               preInstall () {
@@ -124,8 +121,18 @@ module Kitchen
                       echo \"Unsupported RHEL SCL family distribution - ${RHEL_DISTR} ${RHEL_VERSION}\"
                       ;;
                   esac
-                  updatePath
                 fi
+                updatePath
+              }
+            """
+          end
+
+          def update_path
+            """
+              updatePath () {
+                #{sudo('grep')} secure_path /etc/sudoers.d/ansible &> /dev/null || {
+                  #{sudo('echo')} 'Defaults    secure_path = /usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin' | #{sudo('tee')} -a /etc/sudoers.d/ansible
+                }
               }
             """
           end
