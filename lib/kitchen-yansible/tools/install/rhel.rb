@@ -26,6 +26,7 @@ module Kitchen
           def preinstall_command
             """
               #{update_path}
+              #{update_cache}
 
               installPackage () {
                 package=$1

@@ -41,6 +41,8 @@ module Kitchen
                 ## Fix debconf tty warning messages
                 export DEBIAN_FRONTEND=noninteractive
 
+                #{update_cache}
+
                 ## https://github.com/neillturner/kitchen-ansible/blob/master/lib/kitchen/provisioner/ansible/os/debian.rb#L43
                 ## Install apt-utils to silence debconf warning: http://serverfault.com/q/358943/77156
                 ## Install dirmngr to handle GPG key management for stretch,
