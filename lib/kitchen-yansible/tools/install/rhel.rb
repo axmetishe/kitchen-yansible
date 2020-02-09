@@ -45,17 +45,11 @@ module Kitchen
                 RUBY_PACKAGE=$(#{package_manager} search -q ruby|grep '^rh-ruby\\([0-9\\.]\\+\\)\\?\\.'|sort -r|head -n1|awk '{print $1}'|awk -F'.' '{print $1}')
                 installPackage ${RUBY_PACKAGE}
                 RUBY_VERSION=\"$(#{package_manager} info ${RUBY_PACKAGE}|grep -i version|awk '{print $3}')\"
-                #{alternatives_command} --install /usr/local/bin/ruby ruby /opt/rh/${RUBY_PACKAGE}/root/usr/bin/ruby 100 \\
-                  --slave /usr/local/bin/erb erb /opt/rh/${RUBY_PACKAGE}/root/usr/bin/erb \\
-                  --slave /usr/local/bin/gem gem /opt/rh/${RUBY_PACKAGE}/root/usr/bin/gem \\
-                  --slave /usr/local/bin/irb irb /opt/rh/${RUBY_PACKAGE}/root/usr/bin/irb \\
-                  --slave /usr/local/bin/rdoc rdoc /opt/rh/${RUBY_PACKAGE}/root/usr/bin/rdoc \\
-                  --slave /usr/local/bin/ri ri /opt/rh/${RUBY_PACKAGE}/root/usr/bin/ri
-                #{alternatives_command} --set ruby /opt/rh/${RUBY_PACKAGE}/root/usr/bin/ruby
                 test -L /usr/lib64/libruby.so.${RUBY_VERSION} || {
                   #{sudo('ln')} -sf /opt/rh/${RUBY_PACKAGE}/root/usr/lib64/libruby.so.${RUBY_VERSION} \\
                     /usr/lib64/libruby.so.${RUBY_VERSION}
                 }
+                #{ruby_alternatives('/usr/local/bin', "/opt/rh/${RUBY_PACKAGE}/root/usr/bin")}
                 enableSCLPackage ${RUBY_PACKAGE}
               }
 
@@ -127,16 +121,6 @@ module Kitchen
             """
           end
 
-          def update_path
-            """
-              updatePath () {
-                #{sudo('grep')} secure_path /etc/sudoers.d/ansible &> /dev/null || {
-                  #{sudo('echo')} 'Defaults    secure_path = /usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin' | #{sudo('tee')} -a /etc/sudoers.d/ansible
-                }
-              }
-            """
-          end
-
           def install_python
             """
               installPython () {
@@ -189,7 +173,7 @@ module Kitchen
                 #{command_exists('rdoc')} || {
                   #{install_package} rubygem-rdoc
                 }
-                #{sudo('gem')} list | grep busser  || {
+                #{sudo('gem')} list | grep busser || {
                   #{sudo('gem')} install busser
                 }
                 test -d /opt/chef/embedded/bin || {
