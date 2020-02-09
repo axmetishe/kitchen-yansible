@@ -183,7 +183,15 @@ module Kitchen
                   exit 1
                 }
                 echo 'Install Busser'
-                #{sudo('gem')} install busser
+                #{command_exists('gem')} || {
+                  #{install_package} rubygems
+                }
+                #{command_exists('rdoc')} || {
+                  #{install_package} rubygem-rdoc
+                }
+                #{sudo('gem')} list | grep busser  || {
+                  #{sudo('gem')} install busser
+                }
                 test -d /opt/chef/embedded/bin || {
                   #{sudo('mkdir')} -p /opt/chef/embedded/bin
                 }
