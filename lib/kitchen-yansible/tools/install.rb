@@ -177,6 +177,30 @@ module Kitchen
           """
         end
 
+        def ruby_alternatives(install_prefix, alternative_path)
+          """
+            #{command_exists("#{alternative_path}/ruby")} && {
+              #{alternatives_command} --install #{install_prefix}/ruby ruby #{alternative_path}/ruby 100 \\
+                --slave #{install_prefix}/erb erb #{alternative_path}/erb \\
+                --slave #{install_prefix}/gem gem #{alternative_path}/gem \\
+                --slave #{install_prefix}/irb irb #{alternative_path}/irb \\
+                --slave #{install_prefix}/rdoc rdoc #{alternative_path}/rdoc \\
+                --slave #{install_prefix}/ri ri #{alternative_path}/ri
+
+              #{alternatives_command} --set ruby #{alternative_path}/ruby
+            } || {
+              echo '===> Ruby is not installed, exiting now. <==='
+              exit 1
+            }
+
+            echo 'Check alternatives validity'
+            #{command_exists("#{install_prefix}/ruby")} || {
+              echo '===> Ruby alternative is incorrectly installed, exiting now. <==='
+              exit 1
+            }
+          """
+        end
+
         def search_alternatives
           """
             searchAlternatives() {
@@ -190,6 +214,16 @@ module Kitchen
                     #{alternatives_command} --set ${binaryCmd} $(#{check_command("${alternateCmd}")})
                   }
                 }
+              }
+            }
+          """
+        end
+
+        def update_path
+          """
+            updatePath () {
+              #{sudo('grep')} secure_path /etc/sudoers.d/ansible &> /dev/null || {
+                #{sudo('echo')} 'Defaults    secure_path = /usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin' | #{sudo('tee')} -a /etc/sudoers.d/ansible
               }
             }
           """
