@@ -26,6 +26,40 @@ module Kitchen
           def python_version_size
             2
           end
+
+          def preinstall_command
+            """
+              installPackage () {
+                package=$1
+                #{package_manager} -q info ${package} 2>/dev/null|grep installed &>/dev/null || #{install_package} ${package}
+              }
+
+              preInstall () {
+                RHEL_VERSION=$(test -f /etc/system-release-cpe && awk -F':' '{print $5}' /etc/system-release-cpe || echo '0')
+                RHEL_DISTR=$(test -f /etc/system-release-cpe && awk -F':' '{print $3}' /etc/system-release-cpe || echo '0')
+
+                # Sanitize CPE Info
+                case ${RHEL_DISTR} in
+                  amazon)
+                    RHEL_VERSION=6
+                    ;;
+                  o)
+                    RHEL_DISTR=amazon
+                    RHEL_VERSION=7
+                    ;;
+                  *)
+                    ;;
+                esac
+
+                if [[ ${RHEL_VERSION} -eq 7 ]]; then
+                  echo \"Installing Ruby via Amazon Extras repository\"
+                  RUBY_PACKAGE=$(#{sudo('amazon-linux-extras')} list|grep 'ruby\\([0-9\\.]\\+\\)\\?\\.'|sort -r|head -n1|awk '{print $2}')
+                  #{sudo('amazon-linux-extras')} install -y ${RUBY_PACKAGE}
+                  #{package_manager} install -y rubygem-rdoc
+                fi
+              }
+            """
+          end
         end
       end
     end

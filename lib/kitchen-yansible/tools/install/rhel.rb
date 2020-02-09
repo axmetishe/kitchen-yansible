@@ -91,8 +91,22 @@ module Kitchen
                 RHEL_VERSION=$(test -f /etc/system-release-cpe && awk -F':' '{print $5}' /etc/system-release-cpe || echo '0')
                 RHEL_DISTR=$(test -f /etc/system-release-cpe && awk -F':' '{print $3}' /etc/system-release-cpe || echo '0')
 
+                # Sanitize CPE Info
+                case ${RHEL_DISTR} in
+                  amazon)
+                    RHEL_VERSION=6
+                    ;;
+                  o)
+                    RHEL_DISTR=amazon
+                    RHEL_VERSION=7
+                    ;;
+                  *)
+                    ;;
+                esac
+
                 if [[ ${RHEL_VERSION} -eq 6 || ${RHEL_VERSION} -eq 7 ]]; then
                   echo \"We are going to use SCL repository for Python and Ruby installation\"
+                  echo \"Working with ${RHEL_DISTR} ${RHEL_VERSION}\"
                   case ${RHEL_DISTR} in
                     centos)
                       installPackage centos-release-scl-rh
@@ -107,7 +121,7 @@ module Kitchen
                       fi
                       ;;
                     *)
-                      echo \"Unsupported RHEL family distribution - ${RHEL_DISTR}\"
+                      echo \"Unsupported RHEL SCL family distribution - ${RHEL_DISTR} ${RHEL_VERSION}\"
                       ;;
                   esac
                   updatePath
