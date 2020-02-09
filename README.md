@@ -232,7 +232,7 @@ platforms:
 * Dependencies mgmt - librarian-ansible
 * Remote installation via pkgmgr
 * Platforms:
-** Darwin
-** Alpine
-** Suse
-** *BSD
+  * Darwin
+  * Alpine
+  * Suse
+  * *BSD
