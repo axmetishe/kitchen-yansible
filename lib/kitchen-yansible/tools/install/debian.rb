@@ -49,7 +49,7 @@ module Kitchen
                 ## addressing https://github.com/neillturner/kitchen-ansible/issues/257
                 #{install_package} apt-utils dirmngr
 
-                source /etc/*release*
+                source /etc/os-release
                 if [[ \"${ID}\" = \"debian\" && \"${VERSION_ID}\" = \"7\" ]]; then
                   echo 'Switching Debian Wheezy to archive repository'
                   #{sudo('sed')}  -i -e \"s@deb.\\(debian.org\\)@archive.\\1@g;s@\\(.*updates\\)@#\\1@g\" /etc/apt/sources.list
@@ -131,6 +131,34 @@ module Kitchen
                 echo 'Checking Ruby installation.'
                 searchAlternatives 'ruby'
                 #{command_exists('ruby')} || {
+                  RUBY_PACKAGE=$(apt-cache search ruby|grep '^ruby\\([0-9\\.]\\+\\)\\?\\s'|sort -r|head -n1|awk '{print $1}')
+                  RUBY_VERSION=$(echo ${RUBY_PACKAGE}|grep -o '\\([0-9\\.]\\+\\)')
+                  dpkg --compare-versions ${RUBY_VERSION} ge 2.2.0 || {
+                    echo 'Adding ppa:brightbox/ruby-ng'
+                    #{install_package} ca-certificates
+                    source /etc/os-release
+                    if [[ \"${VERSION_ID}\" = \"12.04\" ]]; then
+                      #{install_package} python-software-properties
+                    else
+                      #{install_package} software-properties-common
+                    fi
+                    #{sudo('apt-add-repository')} -y ppa:brightbox/ruby-ng
+                    if [[ \"${VERSION_ID}\" = \"8\" && \"${ID}\" = \"debian\" ]]; then
+                      #{sudo('sed')} -i 's/jessie/trusty/g' /etc/apt/sources.list.d/brightbox-ruby-ng-jessie.list
+                    fi
+                    #{update_cache}
+                    RUBY_PACKAGE=$(apt-cache search ruby|grep '^ruby\\([0-9\\.]\\+\\)\\?\\s'|sort -r|head -n1|awk '{print $1}')
+                    RUBY_VERSION=$(echo ${RUBY_PACKAGE}|grep -o '\\([0-9\\.]\\+\\)')
+                  }
+                  echo 'Rechecking available versions'
+                  RUBY_PACKAGE=$(apt-cache search ruby|grep '^ruby\\([0-9\\.]\\+\\)\\?\\s'|sort -r|head -n1|awk '{print $1}')
+                  RUBY_VERSION=$(echo ${RUBY_PACKAGE}|grep -o '\\([0-9\\.]\\+\\)')
+                  dpkg --compare-versions ${RUBY_VERSION} ge 2.2.0 || {
+                    echo \"===> Only ${RUBY_VERSION} which is less than 2.2.0 found. <===\"
+                    echo \"===> Couldn't find acceptable Ruby version - exiting now! <===\"
+                    exit 1
+                  }
+                  #{install_package} ${RUBY_PACKAGE}
 
                   echo 'Checking for installed alternatives.'
                   #{command_exists('ruby')} || {
