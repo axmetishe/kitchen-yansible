@@ -167,77 +167,37 @@ platforms:
       remote_executor: false
 
   # Docker driver
+  ## RHEL-based
   - name: centos-6
-    driver_config:
-      image: centos:6
   - name: centos-7
     driver_config:
-      image: centos:7
       provision_command:
         - yum install -y unzip tar
   - name: centos-8
-    driver_config:
-      image: centos:8
   - name: oraclelinux-6
-    driver_config:
-      image: oraclelinux:6
   - name: oraclelinux-7
-    driver_config:
-      image: oraclelinux:7
   - name: oraclelinux-8
-    driver_config:
-      image: oraclelinux:8
   - name: fedora-26
-    driver_config:
-      image: fedora:26
   - name: fedora-27
-    driver_config:
-      image: fedora:27
   - name: fedora-28
-    driver_config:
-      image: fedora:28
   - name: fedora-29
-    driver_config:
-      image: fedora:29
   - name: fedora-30
-    driver_config:
-      image: fedora:30
   - name: fedora-31
-    driver_config:
-      image: fedora:31
   - name: amazonlinux-1
-    driver_config:
-      image: amazonlinux:1
   - name: amazonlinux-2
-    driver_config:
-      image: amazonlinux:2
+  
+  ## Debian-based
   - name: debian-7
     driver_config:
       image: local/debian:7
   - name: debian-8
-    driver_config:
-      image: debian:8
   - name: debian-9
-    driver_config:
-      image: debian:9
   - name: debian-10
-    driver_config:
-      image: debian:10
   - name: ubuntu-14.04
-    driver_config:
-      image: ubuntu:14.04
   - name: ubuntu-16.04
-    driver_config:
-      image: ubuntu:16.04
   - name: ubuntu-18.04
-    driver_config:
-      image: ubuntu:18.04
   - name: ubuntu-19.04
-    driver_config:
-      image: ubuntu:19.04
   - name: ubuntu-19.10
-    driver_config:
-      image: ubuntu:19.10
 
   # Docker driver, systemd init system
   - name: centos-8-systemd
@@ -268,11 +228,11 @@ platforms:
 
 ## TODO
 
-- Tests execution
-- Dependencies mgmt - librarian-ansible
-- Remote installation via pkgmgr
-- Platforms:
--- Darwin
--- Alpine
--- Suse
--- *BSD
+* Tests execution
+* Dependencies mgmt - librarian-ansible
+* Remote installation via pkgmgr
+* Platforms:
+** Darwin
+** Alpine
+** Suse
+** *BSD
