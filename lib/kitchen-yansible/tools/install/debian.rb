@@ -50,8 +50,30 @@ module Kitchen
                 source /etc/*release*
                 if [[ \"${ID}\" = \"debian\" && \"${VERSION_ID}\" = \"7\" ]]; then
                   echo 'Switching Debian Wheezy to archive repository'
-                  sed -i -e \"s@deb.\\(debian.org\\)@archive.\\1@g;s@\\(.*updates\\)@#\\1@g\" /etc/apt/sources.list
+                  #{sudo('sed')}  -i -e \"s@deb.\\(debian.org\\)@archive.\\1@g;s@\\(.*updates\\)@#\\1@g\" /etc/apt/sources.list
                   PIP_ARGS=\"-i https://pypi.python.org/simple/\"
+
+                  #{command_exists('ruby')} || {
+                    RUBY_VERSION=2.5.7
+                    echo '============================================================================================'
+                    echo \"Compiling Ruby ${RUBY_VERSION} because we need Ruby >= 2.2 for Busser\"
+                    echo \"Please consider custom docker image use with precompiled Ruby for speedup converge actions.\"
+                    echo '============================================================================================'
+                    sleep 10
+                    #{install_package} wget ca-certificates
+                    #{install_package} --force-yes libssl1.0.0=1.0.1e-2+deb7u20 \\
+                      libc6=2.13-38+deb7u10 \\
+                      libc-bin=2.13-38+deb7u10 \\
+                      zlib1g-dev libssl-dev libreadline-dev libgdbm-dev \\
+                      patch gcc make libreadline-dev
+                    mkdir -p /tmp/ruby && cd /tmp/ruby
+                    wget -qO- https://cache.ruby-lang.org/pub/ruby/$(echo ${RUBY_VERSION}|cut -c 1-3)/ruby-${RUBY_VERSION}.tar.gz|tar -xz \\
+                      && cd /tmp/ruby/ruby-${RUBY_VERSION}
+                    ./configure --disable-install-rdoc && make
+                    #{sudo('make')} install
+                    #{ruby_alternatives('/usr/bin', "/usr/local/bin")}
+                    rm -rf /tmp/ruby
+                  }
                 fi
               }
             """
@@ -97,6 +119,48 @@ module Kitchen
                   echo \"===> Couldn't install Virtualenv - exiting now! <===\"
                   exit 1
                 }
+              }
+            """
+          end
+
+          def install_ruby
+            """
+              installRuby () {
+                echo 'Checking Ruby installation.'
+                searchAlternatives 'ruby'
+                #{command_exists('ruby')} || {
+
+                  echo 'Checking for installed alternatives.'
+                  #{command_exists('ruby')} || {
+                    searchAlternatives 'ruby'
+                  }
+                  grep 'gem: --no-rdoc --no-ri -​-no-document' /etc/gemrc &> /dev/null || {
+                    #{sudo('echo')} 'gem: --no-rdoc --no-ri -​-no-document' | #{sudo('tee')} /etc/gemrc
+                  }
+                }
+                #{command_exists('ruby')} || {
+                  echo \"===> Couldn't determine Ruby executable - exiting now! <===\"
+                  exit 1
+                }
+                echo 'Install Busser'
+                #{command_exists('gem')} || {
+                  #{install_package} rubygems
+                }
+                #{command_exists('rdoc')} || {
+                  #{install_package} rubygem-rdoc
+                }
+                #{sudo('gem')} list | grep busser || {
+                  #{sudo('gem')} install busser
+                }
+                test -d /opt/chef/embedded/bin || {
+                  #{sudo('mkdir')} -p /opt/chef/embedded/bin
+                }
+                echo 'Making links for Chef'
+                for binary in ruby gem busser; do
+                  test -L /opt/chef/embedded/bin/${binary} || {
+                    #{sudo('ln')} -sf \"$(command -v ${binary})\" /opt/chef/embedded/bin/${binary}
+                  }
+                done
               }
             """
           end
