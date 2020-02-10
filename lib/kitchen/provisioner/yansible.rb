@@ -62,6 +62,7 @@ module Kitchen
         info("Installing provisioner software.")
         info("Working with '#{@instance.platform.os_type}' platform.")
         debug("Driver info: '#{@instance.driver.diagnose}'.")
+        debug("Transport info: '#{@instance.transport.diagnose}'.")
         debug("Platform info: '#{@instance.platform.diagnose}'.")
         instance_platform = detect_platform
 
