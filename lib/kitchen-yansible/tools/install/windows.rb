@@ -43,11 +43,19 @@ module Kitchen
               mkdir $installDir -Force | out-null
 
               try {
-                if (! (Test-Path \"${distrDir}\\${installerName}\") ) {
-                  echo \"Downloading ${installerName}\"
-                  Invoke-WebRequest -DisableKeepAlive -UseBasicParsing -Method GET -Uri \"${downloadUrl}\" -OutFile \"${distrDir}\\${installerName}\"
+                $binaryInstalled = $False
+                try {
+                  $binaryInstalled=(&{#{test_binary} --version} 2>&1 | % gettype) -ne [System.Management.Automation.ErrorRecord]
                 }
-                if (! (Test-Path \"${installDir}\\${testBinary}\") ) {
+                catch {
+                  echo \"#{test_binary.capitalize} is not installed.\"
+                }
+                if (! $binaryInstalled) {
+                  if (! (Test-Path \"${distrDir}\\${installerName}\") ) {
+                    echo \"Downloading ${installerName}\"
+                    Invoke-WebRequest -DisableKeepAlive -UseBasicParsing -Method GET -Uri \"${downloadUrl}\" -OutFile \"${distrDir}\\${installerName}\"
+                  }
+
                   echo \"Installing ${installerName}\"
                   $p = Start-Process -Wait -Passthru -FilePath \"${distrDir}\\${installerName}\" -ArgumentList #{install_arguments.join(', ')}
 
@@ -55,7 +63,7 @@ module Kitchen
                     throw \"${installerName} installation was not successful. Received exit code $($p.ExitCode)\"
                   }
                 } else {
-                  echo \"Installed already. Skipping.\"
+                  echo \"#{test_binary.capitalize} installed already. Skipping.\"
                 }
               }
               catch {
@@ -76,7 +84,7 @@ module Kitchen
             install_args = [ '/passive', 'InstallAllUsers=1', 'PrependPath=1', "TargetDir=\"#{install_dir}\"", '/quiet' ]
 
             """
-              #{install_win_software(download_url, distr_dir, install_dir, install_args, "bin\\python.exe")}
+              #{install_win_software(download_url, distr_dir, install_dir, install_args, "python")}
             """
           end
 
@@ -91,7 +99,7 @@ module Kitchen
             install_args = [ '/silent', '/lang=en', '/tasks="assocfiles,modpath"', "/dir=\"#{install_dir}\"" ]
 
             """
-              #{install_win_software(download_url, distr_dir, install_dir, install_args, "bin\\ruby.exe")}
+              #{install_win_software(download_url, distr_dir, install_dir, install_args, "ruby")}
             """
           end
 
