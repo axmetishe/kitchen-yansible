@@ -2,6 +2,8 @@
 
 Yet Another Ansible [Test Kitchen](https://github.com/test-kitchen/test-kitchen) Provisioner
 
+[![Gem Version](https://badge.fury.io/rb/kitchen-yansible.svg)](http://badge.fury.io/rb/kitchen-yansible)
+[![Gem Downloads](http://ruby-gem-downloads-badge.herokuapp.com/kitchen-yansible?type=total&color=brightgreen)](https://rubygems.org/gems/kitchen-yansible)
 [![Build Status](https://travis-ci.org/axmetishe/kitchen-yansible.svg?branch=develop)](https://travis-ci.org/axmetishe/kitchen-yansible)
 
 ## Why another
