@@ -2,6 +2,8 @@
 
 Yet Another Ansible [Test Kitchen](https://github.com/test-kitchen/test-kitchen) Provisioner
 
+[![Build Status](https://travis-ci.org/axmetishe/kitchen-yansible.svg?branch=develop)](https://travis-ci.org/axmetishe/kitchen-yansible)
+
 ## Why another
 For a long time I used to work with SaltStack with integration testing for at least two platforms and it was
 a great experience, special thanks to eco-system created by SaltStack team and [Daniel Wallace](https://github.com/gtmanfred)
