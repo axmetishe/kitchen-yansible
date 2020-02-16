@@ -185,7 +185,7 @@ platforms:
   - name: fedora-31
   - name: amazonlinux-1
   - name: amazonlinux-2
-  
+
   ## Debian-based
   - name: debian-7
     driver_config:
@@ -228,7 +228,6 @@ platforms:
 
 ## TODO
 
-* Tests execution
 * Dependencies mgmt - librarian-ansible
 * Remote installation via pkgmgr
 * Platforms:
