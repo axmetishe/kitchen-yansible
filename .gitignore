@@ -69,6 +69,8 @@ local.properties
 
 ## Ruby
 vendor/
+Gemfile.lock
+*.gem
 
 ## Test-Kitchen
 .kitchen/
