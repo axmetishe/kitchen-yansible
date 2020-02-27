@@ -24,6 +24,7 @@ require 'kitchen-yansible/tools/install/fedora'
 require 'kitchen-yansible/tools/install/amazon'
 require 'kitchen-yansible/tools/install/debian'
 require 'kitchen-yansible/tools/install/windows'
+require 'kitchen-yansible/tools/install/darwin'
 
 module Kitchen
   module Yansible
@@ -56,14 +57,14 @@ module Kitchen
             return Amazon.new(config, platform)
           # when 'suse', 'opensuse', 'sles'
           #   return Suse.new(platform, config)
-          # when 'darwin', 'mac', 'macos', 'macosx'
-          #   return Darwin.new(platform, config)
+           when 'darwin', 'mac', 'macos', 'macosx'
+             return Darwin.new(config, platform)
           # when 'alpine'
-          #   return Alpine.new(platform, config)
+          #   return Alpine.new(config, platform)
           # when 'openbsd'
-          #   return Openbsd.new(platform, config)
+          #   return Openbsd.new(config, platform)
           # when 'freebsd'
-          #   return Freebsd.new(platform, config)
+          #   return Freebsd.new(config, platform)
           when /.*windows.*/
             return Windows.new(config, platform)
           else

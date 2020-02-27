@@ -170,6 +170,15 @@ platforms:
     provisioner:
       remote_executor: false
 
+  - name: macos
+    driver:
+      name: vagrant
+      provider: libvirt
+      box: macos-10.15-catalina
+      vagrantfile_erb: 'osx/Vagrantfile'
+    provisioner:
+      remote_executor: false
+
   # Docker driver
   ## RHEL-based
   - name: centos-6
@@ -239,3 +248,4 @@ platforms:
   * Alpine
   * Suse
   * *BSD
+* Vars from kitchen.yml with recursive merge for suite overrides
