@@ -69,7 +69,7 @@ module Kitchen
         if @config[:remote_executor]
           if windows_os?
             message = unindent(<<-MSG)
-  
+
               ===============================================================================
                We can't use Windows platform with remote installation.
                Abandon ship!
@@ -89,7 +89,7 @@ module Kitchen
           else
             if RbConfig::CONFIG["host_os"] =~ /mswin|mingw/
               message = unindent(<<-MSG)
-  
+
                 ===============================================================================
                  We can't use Windows platform as a Host system for sandboxing.
                  Abandon ship!
@@ -118,7 +118,7 @@ module Kitchen
                   )
                 else
                   message = unindent(<<-MSG)
-  
+
                     ===============================================================================
                      Couldn't find virtualenv binary for sandboxing.
                      Please make sure execution host has Python and VirtualEnv packages installed.
@@ -189,10 +189,14 @@ module Kitchen
           info("Execute Ansible remotely.")
 
           command_env_script = []
+          if %w(darwin mac macos macosx).include? detect_platform
+            command_env_script.push('source ~/.profile')
+          end
+
           command_env.each {|k,v| command_env_script.push(shell_env_var(k, v))}
 
           """
-            #{command_env_script.join(' ')}; #{command} #{command_args.join(' ')}
+            #{command_env_script.join('; ')}; #{command} #{command_args.join(' ')}
           """
         else
           info("Execute Ansible locally.")

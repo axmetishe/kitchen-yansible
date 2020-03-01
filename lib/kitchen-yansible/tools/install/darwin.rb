@@ -45,8 +45,9 @@ module Kitchen
 
           def preinstall_command
             """
+              #{update_path}
+
               preInstall () {
-                #{update_path}
                 updatePath
               }
             """
@@ -55,7 +56,19 @@ module Kitchen
           def install_python
             """
               installPython () {
-                searchAlternatives python
+                PYTHON_CMD='/usr/bin/python3'
+                #{command_exists("${PYTHON_CMD}")} || {
+                  PYTHON_CMD='/usr/bin/python'
+                }
+                grep 'ANSIBLE_PYTHON_INTERPRETER' ~/.profile &> /dev/null || {
+                  echo \"ANSIBLE_PYTHON_INTERPRETER=${PYTHON_CMD}\" >> ~/.profile
+                  echo 'export ANSIBLE_PYTHON_INTERPRETER' >> ~/.profile
+                }
+                #{sudo('grep')} ANSIBLE_PYTHON_INTERPRETER /etc/sudoers.d/ansible &> /dev/null || {
+                  #{sudo('echo')} 'Defaults    env_keep += \"ANSIBLE_PYTHON_INTERPRETER\"' | #{sudo('tee')} -a /etc/sudoers.d/ansible
+                }
+
+                source ~/.profile
               }
             """
           end
@@ -85,24 +98,12 @@ module Kitchen
             """
               installVirtualenv () {
                 echo 'Checking Virtualenv installation.'
-                env
-                searchAlternatives 'virtualenv'
-                env
-                #{command_exists('virtualenv')} || {
-                  echo 'Virtualenv is not installed, will try to install via pip.'
-                  test -x \"#{BINARY_INSTALL_PREFIX}/pip\" || {
-                    #{sudo('easy_install')} pip
-                  }
-                  #{sudo('pip')} install virtualenv
 
-                  echo 'Checking for installed alternatives.'
-                  #{command_exists('virtualenv')} || {
-                    searchAlternatives 'virtualenv'
-                  }
+                ${ANSIBLE_PYTHON_INTERPRETER} -c 'help(\"modules\")'|grep ' pip ' &>/dev/null || {
+                  ${ANSIBLE_PYTHON_INTERPRETER} -m ensurepip
                 }
-                #{command_exists('virtualenv')} || {
-                  echo \"===> Couldn't install Virtualenv - exiting now! <===\"
-                  exit 1
+                ${ANSIBLE_PYTHON_INTERPRETER} -m pip list|grep 'virtualenv' &>/dev/null || {
+                  ${ANSIBLE_PYTHON_INTERPRETER} -m pip install --user virtualenv
                 }
               }
             """
@@ -114,18 +115,65 @@ module Kitchen
                 #{sudo('grep')} secure_path /etc/sudoers.d/ansible &> /dev/null || {
                   #{sudo('echo')} 'Defaults    secure_path = /usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin' | #{sudo('tee')} -a /etc/sudoers.d/ansible
                 }
-                #{sudo('grep')} PATH ~/local.sh &> /dev/null || {
-                  #{sudo('echo')} 'export PATH=/usr/local/bin:$PATH' | #{sudo('tee')} -a /etc/profile.d/local.sh
-                  #{sudo('chmod')} +x /etc/profile.d/local.sh
+
+                grep 'PATH=/usr/local/bin:$PATH' ~/.profile &> /dev/null || {
+                  echo 'PATH=/usr/local/bin:$PATH' >> ~/.profile
+                  echo 'export PATH' >> ~/.profile
                 }
+                source ~/.profile
               }
             """
           end
 
-          def remote_install
+          def install_ansible_pip(sandbox_path)
             """
-              echo 'Not supported yet'
-              exit 1
+              installAnsiblePip () {
+                echo \"Installing Ansible via Pip\"
+                VENV_MODULE=virtualenv
+                echo ${ANSIBLE_PYTHON_INTERPRETER} | grep 3 &>/dev/null && {
+                  VENV_MODULE=venv
+                }
+                test -f #{sandbox_path}/venv/bin/pip || {
+                  mkdir -p #{sandbox_path}
+                  ${ANSIBLE_PYTHON_INTERPRETER} -m ${VENV_MODULE} #{sandbox_path}/venv
+                  #{sandbox_path}/venv/bin/pip install $PIP_ARGS --upgrade pip setuptools
+                }
+                #{sandbox_path}/venv/bin/pip install $PIP_ARGS #{pip_required_packages.join(' ')}
+
+                #{ansible_alternatives(BINARY_INSTALL_PREFIX, sandbox_path)}
+              }
+            """
+          end
+
+          def ansible_alternatives(install_prefix, sandbox_path)
+            """
+              #{command_exists("#{sandbox_path}/venv/bin/ansible")} && {
+                ansibleCommands=( \\
+                  ansible \\
+                  ansible-config \\
+                  ansible-connection \\
+                  ansible-console \\
+                  ansible-doc \\
+                  ansible-galaxy \\
+                  ansible-inventory \\
+                  ansible-playbook \\
+                  ansible-pull \\
+                  ansible-test \\
+                  ansible-vault \\
+                )
+                for ansibleCommand in \"${ansibleCommands[@]}\"; do
+                  #{sudo('ln -sf')} #{sandbox_path}/venv/bin/${ansibleCommand} #{install_prefix}/${ansibleCommand}
+                done
+              } || {
+                echo '===> Ansible is not installed, exiting now. <==='
+                exit 1
+              }
+
+              echo 'Check alternatives validity'
+              #{command_exists("#{install_prefix}/ansible")} || {
+                echo '===> Ansible alternative is incorrectly installed, exiting now. <==='
+                exit 1
+              }
             """
           end
         end
