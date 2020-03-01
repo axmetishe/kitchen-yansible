@@ -37,20 +37,21 @@ Gem::Specification.new do |s|
 = Yet Another Ansible Test Kitchen Provisioner
 ---
 == Features
-- Local and remote execution using single provisioner
-  - Local Ansible sandbox configuration using Virtualenv
-  - Local execution using Ansible from PATH
-  - Remote Ansible installation via Pip and Virtualenv
-- Dependency management
-  - Path based
-  - Git repositories
-- Drivers
-  - Docker
-  - Vagrant
-- Platforms
-  - RHEL-based - CentOS, Fedora, Amazon Linux, Oracle Linux
-  - Debian-based - Debian, Ubuntu
-  - Windows via PS Remoting (Local executor only)
+* Local and remote execution using single provisioner
+  * Local Ansible sandbox configuration using Virtualenv
+  * Local execution using Ansible from PATH
+  * Remote Ansible installation via Pip and Virtualenv
+* Dependency management
+  * Path based
+  * Git repositories
+* Drivers
+  * Docker
+  * Vagrant
+* Platforms
+  * RHEL-based - CentOS, Fedora, Amazon Linux, Oracle Linux
+  * Debian-based - Debian, Ubuntu
+  * Windows via PS Remoting (Local executor only)
+  * MacOS Catalina 10.15.3
 
 EOF
 
