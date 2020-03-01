@@ -28,12 +28,8 @@ module Kitchen
               searchAlternatives() {
                 binaryCmd=$1
                 test -n \"${2}\" && installPrefix=\"${2}\" || installPrefix=#{BINARY_DEFAULT_PREFIX}
-                echo \"installPrefix: ${installPrefix}\"
                 #{command_exists("${binaryCmd}")} || {
-                  echo 'Command not found'
-                  echo \"search string: ${installPrefix}/${binaryCmd}*\"
                   alternateCmd=$(ls -1A ${installPrefix}/${binaryCmd}*|sort -r|head -n1)
-                  echo ${alternateCmd}
                   test -n \"${alternateCmd}\" && {
                     echo \"Attempt to install '${alternateCmd}' as an alternative.\"
                     #{sudo('ln')} -sf \"${alternateCmd}\" #{BINARY_DEFAULT_PREFIX}/${binaryCmd}
