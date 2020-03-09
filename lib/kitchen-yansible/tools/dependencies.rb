@@ -18,15 +18,34 @@
 # specific language governing permissions and limitations
 # under the License.
 
-require 'rugged'
-
 module Kitchen
   module Yansible
     module Tools
       module Dependencies
         def git_clone(name, url, path)
           info("Cloning '#{name}' Git repository.")
-          Rugged::Repository.clone_at(url, path, { :ignore_cert_errors => true })
+          execute_local_command("git clone --progress --verbose #{url} #{path}")
+        end
+
+        def git_get_origin(path)
+          debug("Get '#{path}' origin.")
+          execute_local_command( 'git remote get-url origin', opts: { :chdir => path }, return_stdout: true )
+        end
+
+        def git_clean(path)
+          debug("Cleaning up '#{path}' origin.")
+          execute_local_command('git clean -fdx', opts: { :chdir => path })
+          execute_local_command('git reset --hard', opts: { :chdir => path })
+        end
+
+        def git_checkout(path, ref, force: false)
+          debug("Checking out #{ref} on #{path}.")
+          execute_local_command("git checkout #{ref}#{force ? ' -f' : ''}", opts: { :chdir => path })
+        end
+
+        def git_check_ref(path, ref)
+          debug("Checking out #{ref} on #{path}.")
+          execute_local_command("git show-ref #{ref}", opts: { :chdir => path })
         end
 
         def prepare_dependencies(dependencies)
@@ -44,40 +63,52 @@ module Kitchen
             if dependency.key?(:repo)
               if dependency[:repo].downcase == 'git'
                 info('Processing as Git repository.')
-                begin
-                  repo = Rugged::Repository.new(dependency_target_path)
-                  if repo.remotes.first.url.eql?(dependency[:url])
-                    warn("Dependency cloned already.")
+                if command_exists('git')
+                  if File.exist?(dependency_target_path)
+                    if execute_local_command('git status .', opts: { :chdir => dependency_target_path })
+                      if git_get_origin(dependency_target_path).chomp.eql?(dependency[:url])
+                        warn("Dependency downloaded already, resetting to HEAD.")
+                        git_clean(dependency_target_path)
+                      else
+                        warn("Removing directory #{dependency_target_path} due to repository origin difference.")
+                        FileUtils.remove_entry_secure(dependency_target_path)
+                        git_clone(dependency[:name], dependency[:url], dependency_target_path)
+                      end
+                    else
+                      warn("Dependency path '#{dependency_target_path}' is not a valid Git repository. Removing then.")
+                      FileUtils.remove_entry_secure(dependency_target_path)
+                      git_clone(dependency[:name], dependency[:url], dependency_target_path)
+                    end
                   else
-                    warn("Removing directory #{dependency_target_path} due to repository origin difference.")
-                    FileUtils.remove_entry_secure(dependency_target_path)
                     git_clone(dependency[:name], dependency[:url], dependency_target_path)
                   end
-                rescue
-                  if File.exist?(dependency_target_path)
-                    warn("Dependency path '#{dependency_target_path}' is not a valid Git repository. Removing then.")
-                    FileUtils.remove_entry_secure(dependency_target_path)
-                  end
-                  repo = git_clone(dependency[:name], dependency[:url], dependency_target_path)
-                end
 
-                raw_ref = dependency.key?(:ref) ? dependency[:ref] : 'master'
-                begin
-                  repo.rev_parse(raw_ref)
-                rescue
+                  raw_ref = dependency.key?(:ref) ? dependency[:ref] : 'master'
+                  begin
+                    git_check_ref(dependency_target_path, raw_ref)
+                  rescue
+                    message = unindent(<<-MSG)
+
+                      ===============================================================================
+                       Invalid Git reference - #{raw_ref}
+                       Please check '#{dependency[:name]}' dependency configuration.
+                      ===============================================================================
+                    MSG
+                    raise UserError, message
+                  end
+
+                  info("Resetting repository to '#{raw_ref}' reference.")
+                  git_checkout(dependency_target_path, raw_ref, force: true)
+                else
                   message = unindent(<<-MSG)
 
                     ===============================================================================
-                     Invalid Git reference - #{raw_ref}
-                     Please check '#{dependency[:name]}' dependency configuration.
+                     Couldn't find git binary.
+                     Please make sure execution host has Git binaries installed.
                     ===============================================================================
                   MSG
                   raise UserError, message
                 end
-
-                info("Resetting '#{dependency[:name]}' repository to '#{raw_ref}' reference.")
-                repo.checkout(raw_ref, {:strategy => :force})
-                repo.close
               else
                 raise UserError, "Working with '#{dependency[:repo]}' repository is not implemented yet."
               end
