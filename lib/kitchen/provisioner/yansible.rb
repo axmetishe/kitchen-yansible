@@ -236,8 +236,8 @@ module Kitchen
         @command_args = []
         @config[:ansible_extra_arguments].each { |arg| @command_args.push(arg) } if @config[:ansible_extra_arguments]
         @config[:ansible_verbose] ? @command_args.push('-' + 'v' * @config[:ansible_verbosity]) : ''
-        @command_args.push("--inventory=#{remote_file_path(ANSIBLE_INVENTORY, fallback: inventory_file)}")
-        @command_args.push("--limit=#{@instance.name}")
+        @command_args.push("--inventory='#{remote_file_path(ANSIBLE_INVENTORY, fallback: inventory_file)}'")
+        @command_args.push("--limit='#{@instance.name}'")
         @command_args.push(remote_file_path(@config[:playbook]))
 
         @command_args
