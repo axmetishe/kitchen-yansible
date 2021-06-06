@@ -47,9 +47,10 @@ Or maybe you just don't want to install some Python dependencies locally require
 That is why remote installation is also takes a place.
 
 ## How to install
-`gem build kitchen-yansible.gemspec && gem install kitchen-yansible-0.0.1.gem` as for now.
+`gem install kitchen-yansible`
 
-TDB
+## How to install from sources
+`gem build kitchen-yansible.gemspec && gem install kitchen-yansible-0.0.1.gem`
 
 ## How to use
 You need to install the gem and define the provisioner in general.

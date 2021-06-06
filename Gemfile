@@ -22,7 +22,6 @@ source 'https://rubygems.org'
 
 gemspec
 gem 'test-kitchen',       '~>2.0'
-gem 'rugged',             '~>0.25'
 gem 'rake'
 
 group :vagrant do
